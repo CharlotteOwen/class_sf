@@ -332,6 +332,8 @@ int background_functions(
   if (pba->has_scf == _TRUE_) {
     phi = pvecback_B[pba->index_bi_phi_scf];
     phi_prime = pvecback_B[pba->index_bi_phi_prime_scf];
+    //At this point phi and phi prime have already been updated, from their evolution equations, rho_scf is still from the last step, 
+    //The next few lines then calculate the new values for the density etc... from the new values of phi and phi prime
     pvecback[pba->index_bg_phi_scf] = phi; // value of the scalar field phi
     pvecback[pba->index_bg_phi_prime_scf] = phi_prime; // value of the scalar field phi derivative wrt conformal time
     pvecback[pba->index_bg_V_scf] = V_scf(pba,phi); //V_scf(pba,phi); //write here potential as function of phi
@@ -347,23 +349,32 @@ int background_functions(
     rho_m += pvecback[pba->index_bg_rho_scf] - 3.* pvecback[pba->index_bg_p_scf]; //the rest contributes matter
     /*COComment set flag for scalar field evolution here? */
     /*COComment set fluid flag negative as default and KG positive, then if m > 3H, scf_fluid = TRUE and scf_kg_eq = FALSE */
-    /* Where is H stored at this point? Is this correct call to scf_parameters? */
+    /* Where is H stored at this point? Is this correct call to scf_parameters? H seems to be a reasonable value*/
     if (pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H]) {
       pba->scf_fluid = _TRUE_;
       pba->scf_kg_eq = _FALSE_;
-      printf("if statement in pvecback set to fluid equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d ",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+      printf("if statement in pvecback set to fluid equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d \n",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+      printf("phi is %e\n rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
+      printf("KE: %e, pot: %e \n \n",phi_prime*phi_prime/(2*a*a),V_scf(pba,phi));
+      printf("Eq: (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3 is %e \n",(phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3);
+      printf("Omega_scf: %e\n",pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]);
+      printf("rho_crit: %e, H0*H0: %e\n",pvecback[pba->index_bg_rho_crit],pba->H0*pba->H0);
     }
     if (pvecback[pba->index_bg_H] == 0 || pba->scf_parameters[0] < 3*pvecback[pba->index_bg_H]) {
       pba->scf_fluid = _FALSE_;
       pba->scf_kg_eq = _TRUE_;
-      printf("if statement in pvecback set to KG equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d ",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+      // printf("if statement in pvecback set to KG equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d \n",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+      // printf("phi is %e, rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
+      // printf("KE: %e, pot: %e\n \n",phi_prime*phi_prime/(2*a*a),V_scf(pba,phi));
+      // printf("Eq: (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3 is %e \n",(phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3);
+      // printf("Omega_scf: %e\n",pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]);
     }
-    printf("phi is %e \n", phi);
-    printf("rho_phi is %e \n", pvecback[pba->index_bg_rho_scf]);
+    //printf("phi is %e \n", phi);
+    //printf("rho_phi is %e \n", pvecback[pba->index_bg_rho_scf]);
     //COComment Even htough we are evolving fluid eq, i dont think rho_phi is updating from there. fix
     // FILE *fp;
-    // fp = fopen ("phi_movement.txt","w+");
-    // fprintf(fp,"%f \n",phi);
+    // fp = fopen ("phi_movement.txt","a");
+    // fprintf(fp,"%e\n",phi);
     // fclose(fp);
 ;    // printf(" a= %e, Omega_scf = %e, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
     // printf("V(phi) = %e \n phi: %e \n", V_scf(pba,phi)/3, phi);
@@ -557,7 +568,6 @@ int background_init(
 
     /* below we want to inform the user about ncdm species*/
     if (pba->N_ncdm > 0) {
-
       Neff = pba->Omega0_ur/7.*8./pow(4./11.,4./3.)/pba->Omega0_g;
 
       /* loop over ncdm species */
@@ -617,7 +627,7 @@ int background_init(
   class_call(background_indices(pba),
              pba->error_message,
              pba->error_message);
-
+printf("Should have run class test on shooting and call on background indices by now ");
   /** - control that cosmological parameter values make sense */
 
   /* H0 in Mpc^{-1} */
@@ -652,7 +662,6 @@ int background_init(
                "Your choice for w(a--->0)=%g is suspicious, since it is bigger than -1/3 there cannot be radiation domination at early times\n",
                w_fld);
   }
-
   /* in verbose mode, inform the user about the value of the ncdm
      masses in eV and about the ratio [m/omega_ncdm] in eV (the usual
      93 point something)*/
@@ -2202,19 +2211,19 @@ int background_derivs(
   if (pba->has_scf == _TRUE_){
     /** - Scalar field equation: \f$ \phi'' + 2 a H \phi' + a^2 dV = 0 \f$  (note H is wrt cosmic time) */
     /*COComment - add if statement, dependent on flag, to either use KG equation or fluid equation  */
-    printf("inside SF evolution call\n");
+    //printf("inside SF evolution call\n");
     if (pba->scf_kg_eq == _TRUE_) {
     dy[pba->index_bi_phi_scf] = y[pba->index_bi_phi_prime_scf];
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
-    printf("Evolving scalar field using KG equation.\n");
+    //printf("Evolving scalar field using KG equation.\n");
 
   }
-    if (pba->scf_fluid == _TRUE_) {
+    else if (pba->scf_fluid == _TRUE_) {
       /*COComment - treat as a perfect fluid with w = 0 */
     dy[pba->index_bg_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bg_rho_scf];
-    printf("Evolving scalar field using fluid equation.\n");
+    //printf("Evolving scalar field using fluid equation.\n");
     }
 
     else if (pba->scf_fluid == _FALSE_ && pba->scf_kg_eq == _FALSE_) {
