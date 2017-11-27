@@ -345,7 +345,27 @@ int background_functions(
     //divide relativistic & nonrelativistic (not very meaningful for oscillatory models)
     rho_r += 3.*pvecback[pba->index_bg_p_scf]; //field pressure contributes radiation
     rho_m += pvecback[pba->index_bg_rho_scf] - 3.* pvecback[pba->index_bg_p_scf]; //the rest contributes matter
-    // printf(" a= %e, Omega_scf = %e, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
+    /*COComment set flag for scalar field evolution here? */
+    /*COComment set fluid flag negative as default and KG positive, then if m > 3H, scf_fluid = TRUE and scf_kg_eq = FALSE */
+    /* Where is H stored at this point? Is this correct call to scf_parameters? */
+    if (pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H]) {
+      pba->scf_fluid = _TRUE_;
+      pba->scf_kg_eq = _FALSE_;
+      printf("if statement in pvecback set to fluid equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d ",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+    }
+    if (pvecback[pba->index_bg_H] == 0 || pba->scf_parameters[0] < 3*pvecback[pba->index_bg_H]) {
+      pba->scf_fluid = _FALSE_;
+      pba->scf_kg_eq = _TRUE_;
+      printf("if statement in pvecback set to KG equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d ",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+    }
+    printf("phi is %e \n", phi);
+    printf("rho_phi is %e \n", pvecback[pba->index_bg_rho_scf]);
+    //COComment Even htough we are evolving fluid eq, i dont think rho_phi is updating from there. fix
+    // FILE *fp;
+    // fp = fopen ("phi_movement.txt","w+");
+    // fprintf(fp,"%f \n",phi);
+    // fclose(fp);
+;    // printf(" a= %e, Omega_scf = %e, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
     // printf("V(phi) = %e \n phi: %e \n", V_scf(pba,phi)/3, phi);
     // printf("K.E %e " , phi_prime*phi_prime/(2*a*a));
     // printf("Omega full %e", (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/(3*rho_tot));
@@ -770,6 +790,9 @@ int background_indices(
   pba->has_fld = _FALSE_;
   pba->has_ur = _FALSE_;
   pba->has_curvature = _FALSE_;
+  pba->scf_kg_eq = _FALSE_;
+  pba->scf_fluid = _FALSE_;
+  /*COComment this probably isn't the best place to initialise this */
 
   if (pba->Omega0_cdm != 0.)
     pba->has_cdm = _TRUE_;
@@ -2178,11 +2201,27 @@ int background_derivs(
 
   if (pba->has_scf == _TRUE_){
     /** - Scalar field equation: \f$ \phi'' + 2 a H \phi' + a^2 dV = 0 \f$  (note H is wrt cosmic time) */
+    /*COComment - add if statement, dependent on flag, to either use KG equation or fluid equation  */
+    printf("inside SF evolution call\n");
+    if (pba->scf_kg_eq == _TRUE_) {
     dy[pba->index_bi_phi_scf] = y[pba->index_bi_phi_prime_scf];
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
+    printf("Evolving scalar field using KG equation.\n");
+
   }
+    if (pba->scf_fluid == _TRUE_) {
+      /*COComment - treat as a perfect fluid with w = 0 */
+    dy[pba->index_bg_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bg_rho_scf];
+    printf("Evolving scalar field using fluid equation.\n");
+    }
+
+    else if (pba->scf_fluid == _FALSE_ && pba->scf_kg_eq == _FALSE_) {
+      /*COComment Throw an error code if neither KG nor fluid equations apply - this should never happen */
+      printf("We are not evolving scalar field as KG nor fluid eq, something has gone wrong!\n");
+    }
+}
 
 
   return _SUCCESS_;

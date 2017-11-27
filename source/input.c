@@ -4365,6 +4365,7 @@ int input_try_unknown_parameters(double * unknown_parameter,
     case Omega_scf:
       /** - In case scalar field is used to fill, pba->Omega0_scf is not equal to pfzw->target_value[i].*/
     /*cjcomment is this the value of energy density used for matching in shooting? */
+    /*COComment This must be updated to use value of rho from fluid equation */
       output[i] = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0)
         -ba.Omega0_scf;
         printf("output[i] for scalar field %e \n", output[i]);
@@ -4599,6 +4600,7 @@ int input_find_root(double *xzero,
   double x1, x2, f1, f2, dxdy, dx;
   int iter, iter2;
   int return_function;
+  int i;
   /** Summary: */
 
   /** - Fisrt we do our guess */
@@ -4621,7 +4623,7 @@ int input_find_root(double *xzero,
   /** - Do linear hunt for boundaries */
   /*Need to change this bit, if x1 >0 and f1 >>>, then move left, if x2 <0 and f2 >>>>, move right */
   /*This is working, but we need to change dx every time we move from positive to negative or vice versa */
-  for (iter=1; iter<=50; iter++){
+  for (iter=1; iter<=3; iter++){
     //x2 = x1 + search_dir*dx;
     if (x1 > 0 || x2 > 0){
     	printf("x1 is positive: %e\n",x1);
@@ -4636,6 +4638,12 @@ int input_find_root(double *xzero,
       //fprintf(stderr,"iter2=%d\n",iter2);
 
       if (return_function ==_SUCCESS_) {
+      //   FILE *fp;
+      //   fp = fopen ("phi_movement.txt","w+");
+      //   for(i=0;i<pfzw->background.phi_scf_size,i++){
+      //   fprintf(fp,pfzw->bachground.phi_scf)
+      // }
+      // fclosef(fp);
         break;
       }
       else if (iter2 < 3) {
