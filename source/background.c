@@ -337,7 +337,7 @@ int background_functions(
   }
   /* Scalar field */
   if (pba->has_scf == _TRUE_ && pba->scf_kg_eq == _TRUE_) {
-    // printf("here KG equation\n %e",3*pvecback[pba->index_bg_H]);
+    printf("here KG equation %e \n", pvecback_B[pba->index_bi_phi_scf]);
     phi = pvecback_B[pba->index_bi_phi_scf];
     phi_prime = pvecback_B[pba->index_bi_phi_prime_scf];
     //At this point phi and phi prime have already been updated, from their evolution equations, rho_scf is still from the last step,
@@ -350,6 +350,7 @@ int background_functions(
     pvecback[pba->index_bg_rho_scf] = (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3.; // energy of the scalar field. The field units are set automatically by setting the initial conditions
     pvecback[pba->index_bg_p_scf] =(phi_prime*phi_prime/(2*a*a) - V_scf(pba,phi))/3.; // pressure of the scalar field
     pvecback[pba->index_bg_w_scf] =pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]; // e.o.s of the scalar field, only used for outputs
+    pvecback_B[pba->index_bi_rho_scf] = pvecback[pba->index_bg_rho_scf];
     rho_tot += pvecback[pba->index_bg_rho_scf];
     p_tot += pvecback[pba->index_bg_p_scf];
     //divide relativistic & nonrelativistic (not very meaningful for oscillatory models)
@@ -966,7 +967,7 @@ int background_indices(
   class_define_index(pba->index_bi_phi_scf,pba->has_scf,index_bi,1);
   class_define_index(pba->index_bi_phi_prime_scf,pba->has_scf,index_bi,1);
   /* -> energy density in scf */ //necessary when we switch to the fluid equation
-  if(pba->scf_potential == axionquad || pba->scf_potential == axion)class_define_index(pba->index_bi_rho_scf,pba->has_scf,index_bi,1);
+  class_define_index(pba->index_bi_rho_scf,pba->has_scf,index_bi,1);
 
   /* End of {B} variables, now continue with {C} variables */
   pba->bi_B_size = index_bi;
@@ -1979,7 +1980,7 @@ int background_initial_conditions(
                pvecback_integration[pba->index_bi_phi_scf],
                pvecback_integration[pba->index_bi_phi_scf]);
 
-    if(pba->scf_potential == axionquad || pba->scf_potential == axion)pvecback_integration[pba->index_bi_rho_scf] = 0; //initialise to 0, we will update its value when needed.
+    pvecback_integration[pba->index_bi_rho_scf] = 0; //initialise to 0, we will update its value when needed.
   }
 
   /* Infer pvecback from pvecback_integration */
@@ -2232,8 +2233,9 @@ int background_derivs(
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
-    y[pba->index_bi_rho_scf] = y[pba->index_bg_rho_scf]; //Update the scf density until the fluid equation starts.
-    printf("Evolving scalar field using KG equation. phi %e phi prime %e \n", pba->index_bi_phi_scf,pba->index_bi_phi_prime_scf );
+    dy[pba->index_bi_rho_scf] = 0; //Update the scf density until the fluid equation starts.
+    //y[pba->index_bi_rho_scf] = y[pba->index_bg_rho_scf];
+    printf("Evolving scalar field using KG equation. phi %e phi prime %e \n", y[pba->index_bi_phi_scf],dy[pba->index_bi_phi_scf]  );
 
   }
     else if (pba->scf_fluid == _TRUE_) {

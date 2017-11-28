@@ -4539,7 +4539,8 @@ int input_get_guess(double *xguess,
 
       }
       if (ba.scf_tuning_index == 1 && (ba.scf_potential == axionquad) ){
-        xguess[index_guess] =1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
+        // xguess[index_guess] =1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
+        xguess[index_guess] =1e-8;
         dxdy[index_guess] = 1e-8; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
         printf("index 0, x = %g, dxdy = %g\n",*xguess,*dxdy);
         printf("Used Omega_scf = %e Omega_g = %e\n", ba.Omega0_scf, ba.Omega0_g);
