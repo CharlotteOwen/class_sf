@@ -271,7 +271,7 @@ int background_functions(
   /* scale factor */
   double a;
   /* scalar field quantities */
-  double phi, phi_prime;
+  double phi = 0, phi_prime = 0;
 
   /** - initialize local variables */
   a = pvecback_B[pba->index_bi_a];
@@ -327,12 +327,20 @@ int background_functions(
     p_tot += (1./3.)*pvecback[pba->index_bg_rho_dr];
     rho_r += pvecback[pba->index_bg_rho_dr];
   }
-
+  if(pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 10*pvecback[pba->index_bg_H]){ //We switch for fluid equations
+    pba->scf_fluid = _TRUE_;
+    pba->scf_kg_eq = _FALSE_;
+  }
+  else{
+    pba->scf_fluid = _FALSE_;
+    pba->scf_kg_eq = _TRUE_;
+  }
   /* Scalar field */
-  if (pba->has_scf == _TRUE_) {
+  if (pba->has_scf == _TRUE_ && pba->scf_kg_eq == _TRUE_) {
+    // printf("here KG equation\n %e",3*pvecback[pba->index_bg_H]);
     phi = pvecback_B[pba->index_bi_phi_scf];
     phi_prime = pvecback_B[pba->index_bi_phi_prime_scf];
-    //At this point phi and phi prime have already been updated, from their evolution equations, rho_scf is still from the last step, 
+    //At this point phi and phi prime have already been updated, from their evolution equations, rho_scf is still from the last step,
     //The next few lines then calculate the new values for the density etc... from the new values of phi and phi prime
     pvecback[pba->index_bg_phi_scf] = phi; // value of the scalar field phi
     pvecback[pba->index_bg_phi_prime_scf] = phi_prime; // value of the scalar field phi derivative wrt conformal time
@@ -350,36 +358,36 @@ int background_functions(
     /*COComment set flag for scalar field evolution here? */
     /*COComment set fluid flag negative as default and KG positive, then if m > 3H, scf_fluid = TRUE and scf_kg_eq = FALSE */
     /* Where is H stored at this point? Is this correct call to scf_parameters? H seems to be a reasonable value*/
-    if (pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H]) {
-      pba->scf_fluid = _TRUE_;
-      pba->scf_kg_eq = _FALSE_;
-      printf("if statement in pvecback set to fluid equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d \n",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
-      printf("phi is %e\n rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
-      printf("KE: %e, pot: %e \n \n",phi_prime*phi_prime/(2*a*a),V_scf(pba,phi));
-      printf("Eq: (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3 is %e \n",(phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3);
-      printf("Omega_scf: %e\n",pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]);
-      printf("rho_crit: %e, H0*H0: %e\n",pvecback[pba->index_bg_rho_crit],pba->H0*pba->H0);
-    }
-    if (pvecback[pba->index_bg_H] == 0 || pba->scf_parameters[0] < 3*pvecback[pba->index_bg_H]) {
-      pba->scf_fluid = _FALSE_;
-      pba->scf_kg_eq = _TRUE_;
-      // printf("if statement in pvecback set to KG equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d \n",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
-      // printf("phi is %e, rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
-      // printf("KE: %e, pot: %e\n \n",phi_prime*phi_prime/(2*a*a),V_scf(pba,phi));
-      // printf("Eq: (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3 is %e \n",(phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3);
-      // printf("Omega_scf: %e\n",pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]);
-    }
-    //printf("phi is %e \n", phi);
-    //printf("rho_phi is %e \n", pvecback[pba->index_bg_rho_scf]);
-    //COComment Even htough we are evolving fluid eq, i dont think rho_phi is updating from there. fix
-    // FILE *fp;
-    // fp = fopen ("phi_movement.txt","a");
-    // fprintf(fp,"%e\n",phi);
-    // fclose(fp);
-;    // printf(" a= %e, Omega_scf = %e, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
+    // printf("phi is %e ", phi);
+    // printf("rho_phi is %e \n", pvecback[pba->index_bg_rho_scf]);
+    // //COComment Even htough we are evolving fluid eq, i dont think rho_phi is updating from there. fix
+    // // FILE *fp;
+    // // fp = fopen ("phi_movement.txt","a");
+    // // fprintf(fp,"%e\n",phi);
+    // // fclose(fp);
+    // // printf(" a= %e, Omega_scf = %e, \n ",a_rel, pvecback[pba->index_bg_rho_scf]/rho_tot );
     // printf("V(phi) = %e \n phi: %e \n", V_scf(pba,phi)/3, phi);
-    // printf("K.E %e " , phi_prime*phi_prime/(2*a*a));
+    // printf("a %e K.E %e " ,a, phi_prime*phi_prime/(2*a*a));
     // printf("Omega full %e", (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/(3*rho_tot));
+  }
+  else if(pba->has_scf == _TRUE_ &&  pba->scf_fluid == _TRUE_){ //Assume axion has w = 0;
+    phi = pvecback[pba->index_bg_phi_scf]; //phi is frozen to its last value.
+    pvecback[pba->index_bg_rho_scf] = pba->Omega0_scf * pow(pba->H0,2) / pow(a_rel,3);
+    // pvecback[pba->index_bg_rho_scf] = pvecback_B[pba->index_bi_rho_scf];
+    pvecback[pba->index_bg_p_scf] = 0;
+    pvecback[pba->index_bg_w_scf] = 0;
+    rho_tot += pvecback[pba->index_bg_rho_scf];
+    p_tot += pvecback[pba->index_bg_p_scf];
+    rho_m += pvecback[pba->index_bg_rho_scf];
+
+    // printf("now fluid equation %e \n",3*pvecback[pba->index_bg_H]);
+
+    // printf("if statement in pvecback set to fluid equations. m = %e, 3H = %e.\n scf_fluid = %d , scf_kg_eq = %d \n",pba->scf_parameters[0],3*pvecback[pba->index_bg_H],pba->scf_fluid,pba->scf_kg_eq);
+    printf("phi is %e\n rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
+    // printf("KE: %e, pot: %e \n \n",phi_prime*phi_prime/(2*a*a),V_scf(pba,phi));
+    // printf("Eq: (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3 is %e \n",(phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3);
+    // printf("Omega_scf: %e\n",pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]);
+    // printf("rho_crit: %e, H0*H0: %e\n",pvecback[pba->index_bg_rho_crit],pba->H0*pba->H0);
   }
 
   /* ncdm */
@@ -816,9 +824,11 @@ int background_indices(
       pba->has_dr = _TRUE_;
   }
 
-  if (pba->Omega0_scf != 0.)
+  if (pba->Omega0_scf != 0.){
     pba->has_scf = _TRUE_;
-	
+    pba->scf_kg_eq = _TRUE_; //Initially, we solve the KG equation.
+  }
+
   if (pba->Omega0_lambda != 0.)
     pba->has_lambda = _TRUE_;
 
@@ -951,9 +961,13 @@ int background_indices(
   /* -> energy density in fluid */
   class_define_index(pba->index_bi_rho_fld,pba->has_fld,index_bi,1);
 
+
+
   /* -> scalar field and its derivative wrt conformal time (Zuma) */
   class_define_index(pba->index_bi_phi_scf,pba->has_scf,index_bi,1);
   class_define_index(pba->index_bi_phi_prime_scf,pba->has_scf,index_bi,1);
+  /* -> energy density in scf */ //necessary when we switch to the fluid equation
+  if(pba->scf_potential == axionquad || pba->scf_potential == axion)class_define_index(pba->index_bi_rho_scf,pba->has_scf,index_bi,1);
 
   /* End of {B} variables, now continue with {C} variables */
   pba->bi_B_size = index_bi;
@@ -1965,6 +1979,8 @@ int background_initial_conditions(
                "initial phi = %e phi_prime = %e -> check initial conditions",
                pvecback_integration[pba->index_bi_phi_scf],
                pvecback_integration[pba->index_bi_phi_scf]);
+
+    if(pba->scf_potential == axionquad || pba->scf_potential == axion)pvecback_integration[pba->index_bi_rho_scf] = 0; //initialise to 0, we will update its value when needed.
   }
 
   /* Infer pvecback from pvecback_integration */
@@ -2217,12 +2233,13 @@ int background_derivs(
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
+    y[pba->index_bi_rho_scf] = y[pba->index_bg_rho_scf]; //Update the scf density until the fluid equation starts.
     //printf("Evolving scalar field using KG equation.\n");
 
   }
     else if (pba->scf_fluid == _TRUE_) {
       /*COComment - treat as a perfect fluid with w = 0 */
-    dy[pba->index_bg_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bg_rho_scf];
+    dy[pba->index_bi_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_scf];
     //printf("Evolving scalar field using fluid equation.\n");
     }
 
@@ -2461,7 +2478,7 @@ double dV_scf(
   }
   else if(pba->scf_potential == axionquad){
     result = V_axionquad_scf(pba,phi);
-  }    
+  }
   //printf("result dVf %e\n", result);
 
   return result;

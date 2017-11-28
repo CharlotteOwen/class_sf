@@ -4340,7 +4340,7 @@ int input_try_unknown_parameters(double * unknown_parameter,
   }
 
 // Cycle through the list of... until the index matches a prearranged cut off...
-  // switch out SOMETHING with new answer. These look to be energy densities for scalar field. 
+  // switch out SOMETHING with new answer. These look to be energy densities for scalar field.
   for (i=0; i < pfzw->target_size; i++) {
     switch (pfzw->target_name[i]) {
     case theta_s:
@@ -4531,7 +4531,7 @@ int input_get_guess(double *xguess,
   * dxdy[index_guess] = -0.5081*pow(ba.Omega0_scf,-9./7.)`;
   *
   * - Version 3: use attractor solution */
-      
+
       if (ba.scf_tuning_index == 0 && (ba.scf_potential == double_exp || ba.scf_potential == pol_times_exp) ){
         xguess[index_guess] = sqrt(3.0/ba.Omega0_scf);
         dxdy[index_guess] = -0.5*sqrt(3.0)*pow(ba.Omega0_scf,-1.5);
@@ -4539,7 +4539,7 @@ int input_get_guess(double *xguess,
 
       }
       if (ba.scf_tuning_index == 1 && (ba.scf_potential == axionquad) ){
-        xguess[index_guess] = 0.000000025; //sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
+        xguess[index_guess] =1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
         dxdy[index_guess] = 1e-8; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
         printf("index 0, x = %g, dxdy = %g\n",*xguess,*dxdy);
         printf("Used Omega_scf = %e Omega_g = %e\n", ba.Omega0_scf, ba.Omega0_g);
@@ -4576,7 +4576,7 @@ int input_get_guess(double *xguess,
       if (gamma > 100)
         dxdy[index_guess] *= gamma/100;
 
-      printf("x = Omega_ini_guess = %g, dxdy = %g\n",*xguess,*dxdy); 
+      printf("x = Omega_ini_guess = %g, dxdy = %g\n",*xguess,*dxdy);
       break;
     }
     /* printf("xguess = %g\n",xguess[index_guess]); */
@@ -4649,7 +4649,7 @@ int input_find_root(double *xzero,
         printf("x1+dx is negative: %e\n",x1+dx);
         x2 = (x1 + dx);
     printf("x2 = %e\n",x2);
-    }		
+    }
       else if (x1+dx > 0){
         printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
         x2 = (x1/10);
@@ -4660,10 +4660,8 @@ int input_find_root(double *xzero,
       return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
       (*fevals)++;
       printf("x2= %g, f2= %g\n",x2,f2);
-      return_function == _SUCCESS_;
-      int test_break = 1;
-      //if (return_function ==_SUCCESS_) {
-      if (test_break == 1){
+      if (return_function ==_SUCCESS_) {
+      // if (test_break == 1){
       //   FILE *fp;
       //   fp = fopen ("phi_movement.txt","w+");
       //   for(i=0;i<pfzw->background.phi_scf_size,i++){
@@ -4686,7 +4684,7 @@ int input_find_root(double *xzero,
     }
 
     if (f1*f2<0.0){
-    if (f1+f2<0.05){
+    // if (f1+f2<0.05){
       /** - root has been bracketed */
       if (0==0){
         printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
@@ -4696,12 +4694,12 @@ int input_find_root(double *xzero,
 
     x1 = x2;
     f1 = f2;
-  } 
+  // }
 }
   ////}
-  
-    
- ///// Original Code: 
+
+
+ ///// Original Code:
   /////else {
     ////printf("Not using axionquad potential");
 // for (iter=1; iter<=15; iter++){
@@ -4737,7 +4735,7 @@ int input_find_root(double *xzero,
 
 //     x1 = x2;
 //     f1 = f2;
-//   }  
+//   }
 ////}
 
   /** - Find root using Ridders method. (Exchange for bisection if you are old-school.)*/
