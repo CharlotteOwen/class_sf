@@ -4369,16 +4369,17 @@ int input_try_unknown_parameters(double * unknown_parameter,
       output[i] = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0)
         -ba.Omega0_scf;
         printf("output[i] for scalar field %e \n", output[i]);
+        // COComment Old print statements for scalar field, not relevant now using fluid equations as phi no longer evolves to end
         // printf("Made up of minus : %e \n", -ba.Omega0_scf);
         // printf("background table [] %e where bt_size = %e, bg_size = %e and index_bg_rho_scf = %e \n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf],ba.bt_size,ba.bg_size,ba.index_bg_rho_scf);
         // printf("backgroundtable[] / H0^2 = %e \n ", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0));
-        printf("Where does the code end up? \n");
-        printf("phi: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_scf]);
-        printf("phidot: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]);
-        printf("K.E (not divided by a, as a=1?): %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]*ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]/2);
-        printf("potential: %e\n",ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_V_scf]);
-        printf("rho_ax / rho_crit: %e\n",ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0));
-        printf("distance away from target: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0) - ba.Omega0_scf);
+        // printf("Where does the code end up? \n");
+        // printf("phi: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_scf]);
+        // printf("phidot: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]);
+        // printf("K.E (not divided by a, as a=1?): %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]*ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_phi_prime_scf]/2);
+        // printf("potential: %e\n",ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_V_scf]);
+        // printf("rho_ax / rho_crit: %e\n",ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0));
+        // printf("distance away from target: %e\n", ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0) - ba.Omega0_scf);
       break;
     case Omega_ini_dcdm:
     case omega_ini_dcdm:
@@ -4539,9 +4540,9 @@ int input_get_guess(double *xguess,
 
       }
       if (ba.scf_tuning_index == 1 && (ba.scf_potential == axionquad) ){
-        // xguess[index_guess] =1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
-        xguess[index_guess] =1e-8;
-        dxdy[index_guess] = 1e-8; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
+        xguess[index_guess] = 0.01*1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
+        //xguess[index_guess] =1e-8;
+        dxdy[index_guess] = 0.1; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
         printf("index 0, x = %g, dxdy = %g\n",*xguess,*dxdy);
         printf("Used Omega_scf = %e Omega_g = %e\n", ba.Omega0_scf, ba.Omega0_g);
 
@@ -4620,7 +4621,7 @@ int input_find_root(double *xzero,
   // Can we edit the method so it's more of a bisection on the final density?
   // if result 2 > result 1, x - dx.
   // if result 2 < result 1, x + dx
-  dx = 0.1*f1*dxdy;
+  dx = f1*dxdy;
   printf("dx = %e\n", dx);
   /** - Do linear hunt for boundaries */
   /*Need to change this bit, if x1 >0 and f1 >>>, then move left, if x2 <0 and f2 >>>>, move right */
@@ -4629,20 +4630,25 @@ int input_find_root(double *xzero,
   /////if (ba.scf_potential == axionquad){
     /////^Why doesnt this work
     ////////printf("Finding root using axionquad potential");
-  for (iter=1; iter<=3; iter++){
+  for (iter=1; iter<=10; iter++){
     //x2 = x1 + search_dir*dx;
+    printf("Root finding iteration: %d \n",iter);
     if (x1 > 0 || x2 > 0){
     	printf("x1 is positive: %e\n",x1);
-    	if(x1-dx > 0){
-    		printf("x1-dx is still positive: %e\n",x1-dx);
+    	if((f1 > 0 || f2>0) && x1-dx > 0){
+    		printf("f1 was too high, x1-dx is still positive: %e\n",x1-dx);
     		x2 = (x1 - dx);
-    		printf("x2 = %e\n",x2);
+    		printf("x2 = x1 - dx = %e\n",x2);
       }
-      else if (x1-dx < 0){
-        printf("x1-dx is negative, using x1/10 instead: %e\n", (x1/10));
-        x2 = (x1/10);
+      else if ((f1 > 0 || f2 >0 ) && x1-dx < 0){
+        printf("f1 was too high but x1-dx is negative, using x1/5 instead: %e\n", (x1/5));
+        x2 = (x1/5);
         printf("x2 = %e\n",x2);
       }
+      else if (f1 < 0 || f2 < 0){
+        printf("f1 was too low, using x1+x1/2: %e\n",x1+x1/2);
+        x2 = (x1 + x1/2);
+        printf("x2 = x1 + x1/2 = %e\n",x2);}
     }
     if (x1 < 0 ){
       printf("x1 is negative: %e\n",x1);
@@ -4684,7 +4690,8 @@ int input_find_root(double *xzero,
       }
     }
 
-    if (f1*f2<0.0){
+    //if (f1*f2<0.0){
+    if (f1+f2<0.01){
     // if (f1+f2<0.05){
       /** - root has been bracketed */
       if (0==0){
