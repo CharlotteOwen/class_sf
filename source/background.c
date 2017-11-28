@@ -635,7 +635,6 @@ int background_init(
   class_call(background_indices(pba),
              pba->error_message,
              pba->error_message);
-printf("Should have run class test on shooting and call on background indices by now ");
   /** - control that cosmological parameter values make sense */
 
   /* H0 in Mpc^{-1} */
@@ -2234,7 +2233,7 @@ int background_derivs(
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
        + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
     y[pba->index_bi_rho_scf] = y[pba->index_bg_rho_scf]; //Update the scf density until the fluid equation starts.
-    //printf("Evolving scalar field using KG equation.\n");
+    printf("Evolving scalar field using KG equation. phi %e phi prime %e \n", pba->index_bi_phi_scf,pba->index_bi_phi_prime_scf );
 
   }
     else if (pba->scf_fluid == _TRUE_) {
