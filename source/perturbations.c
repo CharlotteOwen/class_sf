@@ -669,7 +669,7 @@ int perturb_indices_of_perturbs(
           ppt->has_source_delta_dcdm = _TRUE_;
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
-        if (pba->has_scf == _TRUE_)
+        if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_)
           ppt->has_source_delta_scf = _TRUE_;
         if (pba->has_ur == _TRUE_)
           ppt->has_source_delta_ur = _TRUE_;
@@ -695,7 +695,7 @@ int perturb_indices_of_perturbs(
           ppt->has_source_theta_dcdm = _TRUE_;
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
-        if (pba->has_scf == _TRUE_)
+        if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_)
           ppt->has_source_theta_scf = _TRUE_;
         if (pba->has_ur == _TRUE_)
           ppt->has_source_theta_ur = _TRUE_;
@@ -2531,9 +2531,10 @@ int perturb_prepare_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles, "theta_dr", pba->has_dr);
       class_store_columntitle(ppt->scalar_titles, "shear_dr", pba->has_dr);
       /* Scalar field scf */
+      if (pba->scf_has_perturbations == _TRUE_){
       class_store_columntitle(ppt->scalar_titles, "delta_scf", pba->has_scf);
       class_store_columntitle(ppt->scalar_titles, "theta_scf", pba->has_scf);
-
+      }
       ppt->number_of_scalar_titles =
         get_number_of_titles(ppt->scalar_titles);
     }
@@ -3098,10 +3099,10 @@ int perturb_vector_init(
     }
 
     /* scalar field */
-
+    if (pba->scf_has_perturbations == _TRUE_){
     class_define_index(ppv->index_pt_phi_scf,pba->has_scf,index_pt,1); /* scalar field density */
     class_define_index(ppv->index_pt_phi_prime_scf,pba->has_scf,index_pt,1); /* scalar field velocity */
-
+    }
     /* perturbed recombination: the indices are defined once tca is off. */
     if ( (ppt->has_perturbed_recombination == _TRUE_) && (ppw->approx[ppw->index_ap_tca] == (int)tca_off) ){
       class_define_index(ppv->index_pt_perturbed_recombination_delta_temp,_TRUE_,index_pt,1);
@@ -3510,7 +3511,7 @@ int perturb_vector_init(
         }
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
 
         ppv->y[ppv->index_pt_phi_scf] =
           ppw->pv->y[ppw->pv->index_pt_phi_scf];
@@ -4226,7 +4227,7 @@ int perturb_initial_conditions(struct precision * ppr,
         /* if use_ppf == _TRUE_, y[ppw->pv->index_pt_Gamma_fld] will be automatically set to zero, and this is what we want (although one could probably work out some small nonzero initial conditions: TODO) */
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
         /** - ---> Canonical field (solving for the perturbations):
          *  initial perturbations set to zero, they should reach the attractor soon enough.
          *  - --->  TODO: Incorporate the attractor IC from 1004.5509.
@@ -4464,7 +4465,7 @@ int perturb_initial_conditions(struct precision * ppr,
       }
 
       /* scalar field: check */
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
         alpha_prime = 0.0;
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
@@ -5541,7 +5542,7 @@ int perturb_total_stress_energy(
        from rho_plus_p_shear. So the contribution from the scalar field must be below all
        species with non-zero shear.
     */
-    if (pba->has_scf == _TRUE_) {
+    if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
 
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
@@ -6544,7 +6545,7 @@ int perturb_print_variables(double tau,
       shear_dr = y[ppw->pv->index_pt_F0_dr+2]*0.5/f_dr;
     }
 
-    if (pba->has_scf == _TRUE_){
+    if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_){
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
@@ -6603,7 +6604,7 @@ int perturb_print_variables(double tau,
         theta_dcdm += k*k*alpha;
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
         delta_scf += alpha*(-3.0*H*(1.0+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]));
         theta_scf += k*k*alpha;
       }
@@ -6667,9 +6668,10 @@ int perturb_print_variables(double tau,
     class_store_double(dataptr, theta_dr, pba->has_dr, storeidx);
     class_store_double(dataptr, shear_dr, pba->has_dr, storeidx);
     /* Scalar field scf*/
+    if (pba->scf_has_perturbations == _TRUE_){
     class_store_double(dataptr, delta_scf, pba->has_scf, storeidx);
     class_store_double(dataptr, theta_scf, pba->has_scf, storeidx);
-
+    }
     //fprintf(ppw->perturb_output_file,"\n");
 
   }
@@ -7327,7 +7329,7 @@ int perturb_derivs(double tau,
 
     /** - ---> scalar field (scf) */
 
-    if (pba->has_scf == _TRUE_) {
+    if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
 
       /** - ----> field value */
 

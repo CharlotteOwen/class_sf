@@ -1133,6 +1133,21 @@ int input_read_parameters(
   if (pba->Omega0_scf != 0.){
     /** - Assign a given scalar field potential */
 
+    class_call(parser_read_string(pfc,"scf_has_perturbations",&string1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+
+    if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
+
+    pba->scf_has_perturbations = _TRUE_;
+
+  }
+    else if ((flag1 == _TRUE_) && ((strstr(string1,"n") != NULL) || (strstr(string1,"N") != NULL))) {
+
+    pba->scf_has_perturbations = _FALSE_;
+
+  }
+
     class_call(parser_read_string(pfc,"scf_potential",&string1,&flag1,errmsg),
                errmsg,
                errmsg);
@@ -3488,6 +3503,7 @@ int input_default_params(
   pba->scf_parameters_size = 0;
   pba->scf_tuning_index = 0;
   pba->scf_potential = pol_times_exp;
+  pba->scf_has_perturbations = _FALSE_;
   //MZ: initial conditions are as multiplicative factors of the radiation attractor values
   pba->phi_ini_scf = 1;
   pba->phi_prime_ini_scf = 1;

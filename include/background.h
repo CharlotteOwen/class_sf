@@ -283,6 +283,7 @@ struct background
   short has_curvature; /**< presence of global spatial curvature? */
   short scf_kg_eq;    /**< evolve scalar field with KG equations */
   short scf_fluid;     /**< evolve scalar field with fluid equations */
+  short scf_has_perturbations; /** do scalar field perts
 
   //@}
 
