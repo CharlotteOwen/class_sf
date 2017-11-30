@@ -1088,15 +1088,15 @@ int input_read_parameters(
     pba->Omega0_scf = 1. - pba->Omega0_k - Omega_tot;
     if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_scf = %e\n",pba->Omega0_scf);
   }
-
-  /*
+  
+  
   fprintf(stderr,"%e %e %e %e %e\n",
           pba->Omega0_lambda,
           pba->Omega0_fld,
           pba->Omega0_scf,
           pba->Omega0_k,
           Omega_tot);
-  */
+  
 
   /** - Test that the user have not specified Omega_scf = -1 but left either
       Omega_lambda or Omega_fld unspecified:*/
@@ -4618,7 +4618,7 @@ int input_find_root(double *xzero,
   double x1, x2, f1, f2, dxdy, dx;
   int iter, iter2;
   int return_function;
-  int i;
+  //int i;
 
   /** Summary: */
 
@@ -4646,54 +4646,97 @@ int input_find_root(double *xzero,
   /////if (ba.scf_potential == axionquad){
     /////^Why doesnt this work
     ////////printf("Finding root using axionquad potential");
-  for (iter=1; iter<=10; iter++){
+  // for (iter=1; iter<=10; iter++){
+  //   //x2 = x1 + search_dir*dx;
+  //   printf("Root finding iteration: %d \n",iter);
+  //   if (x1 > 0 || x2 > 0){
+  //   	printf("x1 is positive: %e\n",x1);
+  //   	if((f1 > 0 || f2>0) && x1-dx > 0){
+  //   		printf("f1 was too high, x1-dx is still positive: %e\n",x1-dx);
+  //   		x2 = (x1 - dx);
+  //   		printf("x2 = x1 - dx = %e\n",x2);
+  //     }
+  //     else if ((f1 > 0 || f2 >0 ) && x1-dx < 0){
+  //       printf("f1 was too high but x1-dx is negative, using x1/5 instead: %e\n", (x1/5));
+  //       x2 = (x1/5);
+  //       printf("x2 = %e\n",x2);
+  //     }
+  //     else if (f1 < 0 || f2 < 0){
+  //       printf("f1 was too low, using x1+x1/2: %e\n",x1+x1/2);
+  //       x2 = (x1 + x1/2);
+  //       printf("x2 = x1 + x1/2 = %e\n",x2);}
+  //   }
+  //   if (x1 < 0 ){
+  //     printf("x1 is negative: %e\n",x1);
+  //     if(x1+dx < 0){
+  //       printf("x1+dx is negative: %e\n",x1+dx);
+  //       x2 = (x1 + dx);
+  //   printf("x2 = %e\n",x2);
+  //   }
+  //     else if (x1+dx > 0){
+  //       printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
+  //       x2 = (x1/10);
+  //       printf("x2 = %e\n",x2);
+  //     }
+  //   }
+  //   for (iter2=1; iter2 <= 3; iter2++) {
+  //     return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
+  //     (*fevals)++;
+  //     printf("x2= %g, f2= %g\n",x2,f2);
+  //     if (return_function ==_SUCCESS_) {
+  //     // if (test_break == 1){
+  //     //   FILE *fp;
+  //     //   fp = fopen ("phi_movement.txt","w+");
+  //     //   for(i=0;i<pfzw->background.phi_scf_size,i++){
+  //     //   fprintf(fp,pfzw->bachground.phi_scf)
+  //     // }
+  //     // fclosef(fp);
+  //       printf("Breaking because successful");
+  //       printf("f1 = %e, f2 = %e\n",f1,f2);
+  //       printf("f1+f2 = %e\n", f1+f2);
+  //       break;
+  //     }
+  //     else if (iter2 < 3) {
+  //       dx*=0.5;
+  //       x2 = x1-dx;
+  //     }
+  //     else {
+  //       //fprintf(stderr,"get here\n");
+  //       class_stop(errmsg,errmsg);
+  //     }
+  //   }
+
+  //   //if (f1*f2<0.0){
+  //   if (f1+f2<0.01){
+  //   // if (f1+f2<0.05){
+  //     /** - root has been bracketed */
+  //     if (0==0){
+  //       printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
+  //     }
+  //     break;
+  //   }
+
+  //   x1 = x2;
+  //   f1 = f2;
+  // }
+//}
+  ////}
+
+
+ ///// Original Code:
+  /////else {
+    ////printf("Not using axionquad potential");
+for (iter=1; iter<=15; iter++){
     //x2 = x1 + search_dir*dx;
-    printf("Root finding iteration: %d \n",iter);
-    if (x1 > 0 || x2 > 0){
-    	printf("x1 is positive: %e\n",x1);
-    	if((f1 > 0 || f2>0) && x1-dx > 0){
-    		printf("f1 was too high, x1-dx is still positive: %e\n",x1-dx);
-    		x2 = (x1 - dx);
-    		printf("x2 = x1 - dx = %e\n",x2);
-      }
-      else if ((f1 > 0 || f2 >0 ) && x1-dx < 0){
-        printf("f1 was too high but x1-dx is negative, using x1/5 instead: %e\n", (x1/5));
-        x2 = (x1/5);
-        printf("x2 = %e\n",x2);
-      }
-      else if (f1 < 0 || f2 < 0){
-        printf("f1 was too low, using x1+x1/2: %e\n",x1+x1/2);
-        x2 = (x1 + x1/2);
-        printf("x2 = x1 + x1/2 = %e\n",x2);}
-    }
-    if (x1 < 0 ){
-      printf("x1 is negative: %e\n",x1);
-      if(x1+dx < 0){
-        printf("x1+dx is negative: %e\n",x1+dx);
-        x2 = (x1 + dx);
+    x2 = x1 - dx;
     printf("x2 = %e\n",x2);
-    }
-      else if (x1+dx > 0){
-        printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
-        x2 = (x1/10);
-        printf("x2 = %e\n",x2);
-      }
-    }
     for (iter2=1; iter2 <= 3; iter2++) {
       return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
       (*fevals)++;
       printf("x2= %g, f2= %g\n",x2,f2);
+      //fprintf(stderr,"iter2=%d\n",iter2);
+
       if (return_function ==_SUCCESS_) {
-      // if (test_break == 1){
-      //   FILE *fp;
-      //   fp = fopen ("phi_movement.txt","w+");
-      //   for(i=0;i<pfzw->background.phi_scf_size,i++){
-      //   fprintf(fp,pfzw->bachground.phi_scf)
-      // }
-      // fclosef(fp);
-        printf("Breaking because successful");
-        printf("f1 = %e, f2 = %e\n",f1,f2);
-        printf("f1+f2 = %e\n", f1+f2);
         break;
       }
       else if (iter2 < 3) {
@@ -4706,11 +4749,9 @@ int input_find_root(double *xzero,
       }
     }
 
-    //if (f1*f2<0.0){
-    if (f1+f2<0.01){
-    // if (f1+f2<0.05){
-      /** - root has been bracketed */
-      if (0==0){
+    if (f1*f2<0.0){
+      ///// root has been bracketed /////
+      if (0==1){
         printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
       }
       break;
@@ -4718,49 +4759,8 @@ int input_find_root(double *xzero,
 
     x1 = x2;
     f1 = f2;
-  // }
-}
-  ////}
+  }
 
-
- ///// Original Code:
-  /////else {
-    ////printf("Not using axionquad potential");
-// for (iter=1; iter<=15; iter++){
-//     //x2 = x1 + search_dir*dx;
-//     x2 = x1 - dx;
-//     printf("x2 = %e\n",x2);
-//     for (iter2=1; iter2 <= 3; iter2++) {
-//       return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
-//       (*fevals)++;
-//       printf("x2= %g, f2= %g\n",x2,f2);
-//       //fprintf(stderr,"iter2=%d\n",iter2);
-
-//       if (return_function ==_SUCCESS_) {
-//         break;
-//       }
-//       else if (iter2 < 3) {
-//         dx*=0.5;
-//         x2 = x1-dx;
-//       }
-//       else {
-//         //fprintf(stderr,"get here\n");
-//         class_stop(errmsg,errmsg);
-//       }
-//     }
-
-//     if (f1*f2<0.0){
-//       ///// root has been bracketed /////
-//       if (0==1){
-//         printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
-//       }
-//       break;
-//     }
-
-//     x1 = x2;
-//     f1 = f2;
-//   }
-////}
 
   /** - Find root using Ridders method. (Exchange for bisection if you are old-school.)*/
   printf("Unable to find root, next line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
