@@ -182,6 +182,8 @@ int evolver_ndf15(
   /*Set pointers:*/
   ynew = y_inout-1; /* This way y_inout is always up to date. */
 
+  printf("Inside evolver_ndf15.c variables initialised, calling jacobian etc..."); //print_trigger
+
   /*Initialize the jacobian:*/
   class_call(initialize_jacobian(&jac,neq,error_message),error_message,error_message);
 
@@ -532,9 +534,10 @@ int evolver_ndf15(
 	stepstat[4] += 1;
 	havrate = _FALSE_;
       }
-      else {printf("Completed successful step \n");
+      else {
 
-	break; /* Succesfull step */
+      printf("Completed successful step \n"); //print_trigger
+	  break; /* Succesfull step */
       }
     }
     /* End of conditionless FOR loop */

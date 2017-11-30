@@ -300,7 +300,7 @@ int perturb_init(
   class_alloc(pppw,number_of_threads * sizeof(struct perturb_workspace *),ppt->error_message);
 
   /** - loop over modes (scalar, tensors, etc). For each mode: */
-  printf("About to start loop over modes in perturbations file");
+  printf("About to start loop over modes in perturbations file\n");
 
   for (index_md = 0; index_md < ppt->md_size; index_md++) {
 
@@ -380,7 +380,7 @@ int perturb_init(
 #ifdef _OPENMP
           tstart = omp_get_wtime();
 #endif
-
+          printf("Ready to evolve,calling perturb_solve in parallel\n"); //print_trigger
           class_call_parallel(perturb_solve(ppr,
                                             pba,
                                             pth,
@@ -2181,7 +2181,7 @@ int perturb_solve(
 
   /* will be at least the first time in the background table */
   tau_lower = pba->tau_table[0];
-
+  printf("Inside perturb_solve, calling 'background_at_tau'\n"); //print_trigger
   class_call(background_at_tau(pba,
                                tau_lower,
                                pba->normal_info,
@@ -2190,7 +2190,7 @@ int perturb_solve(
                                ppw->pvecback),
              pba->error_message,
              ppt->error_message);
-
+  printf("Inside perturb_solve, calling 'thermodynamics_at_z'\n"); //print_trigger
   class_call(thermodynamics_at_z(pba,
                                  pth,
                                  1./ppw->pvecback[pba->index_bg_a]-1.,
@@ -2203,6 +2203,7 @@ int perturb_solve(
 
   /* check that this initial time is indeed OK given imposed
      conditions on kappa' and on k/aH */
+  printf("Inside perturb_solve, after 'thermodynamics_at_z'\n"); //print_trigger
 
   class_test(ppw->pvecback[pba->index_bg_a]*
              ppw->pvecback[pba->index_bg_H]/
@@ -2239,6 +2240,7 @@ int perturb_solve(
   while ((tau_upper - tau_lower)/tau_lower > ppr->tol_tau_approx) {
 
     is_early_enough = _TRUE_;
+    printf("Inside perturb_solve, while is_early_enough==TRUE, calling 'background_at_tau'\n"); //print_trigger
 
     class_call(background_at_tau(pba,
                                  tau_mid,
@@ -2296,6 +2298,7 @@ int perturb_solve(
   class_alloc(interval_number_of,ppw->ap_size*sizeof(int),ppt->error_message);
 
   ppw->inter_mode = pba->inter_normal;
+  printf("Inside perturb_solve, calling 'perturb_find_approximation_number'\n"); //print_trigger
 
   class_call(perturb_find_approximation_number(ppr,
                                                pba,
@@ -2317,7 +2320,7 @@ int perturb_solve(
 
   for (index_interval=0; index_interval<interval_number; index_interval++)
     class_alloc(interval_approx[index_interval],ppw->ap_size*sizeof(int),ppt->error_message);
-
+  printf("Inside perturb_solve, calling 'perturb_find_approximation_switches''\n"); //print_trigger
   class_call(perturb_find_approximation_switches(ppr,
                                                  pba,
                                                  pth,
@@ -2397,7 +2400,7 @@ int perturb_solve(
         mode. If it starts from an approximation switching point,
         redistribute correctly the perturbations from the previous to
         the new vector of perturbations. */
-
+    printf("Inside perturb_solve, calling 'perturb_vector_init'\n"); //print_trigger
     class_call(perturb_vector_init(ppr,
                                    pba,
                                    pth,
@@ -2419,7 +2422,7 @@ int perturb_solve(
     else{
       generic_evolver = evolver_ndf15;
     }
-
+    printf("Inside perturb_solve, calling 'generic_evolver'\n"); //print_trigger
     class_call(generic_evolver(perturb_derivs,
                                interval_limit[index_interval],
                                interval_limit[index_interval+1],
@@ -3382,7 +3385,7 @@ int perturb_vector_init(
 
       /** - --> (a) check that current approximation scheme is consistent
           with initial conditions */
-
+      printf("Running checks for scalars\n"); //print_trigger
       class_test(ppw->approx[ppw->index_ap_rsa] == (int)rsa_on,
                  ppt->error_message,
                  "scalar initial conditions assume radiation streaming approximation turned off");
@@ -3428,7 +3431,7 @@ int perturb_vector_init(
     ppw->pv = ppv;
 
     /** - --> (c) fill the vector ppw-->pv-->y with appropriate initial conditions */
-
+    printf("Calling 'perturb_initial_conditions\n"); //print_trigger
     class_call(perturb_initial_conditions(ppr,
                                           pba,
                                           ppt,
@@ -3520,7 +3523,7 @@ int perturb_vector_init(
           ppw->pv->y[ppw->pv->index_pt_phi_prime_scf];
       }
       else if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _FALSE_){
-        printf("No perturbations requested for scalar field"); //trigger
+        printf("No perturbations requested for scalar field"); //printtrigger
       }
 
       if (ppt->gauge == synchronous)
@@ -4239,7 +4242,7 @@ int perturb_initial_conditions(struct precision * ppr,
          *  and assume theta, delta_rho as for perfect fluid
          *  with \f$ c_s^2 = 1 \f$ and w = 1/3 (ASSUMES radiation TRACKING)
         */
-        printf("We have called the scf perturbations\n"); //trigger
+        //printf("We have called the scf perturbations\n"); //trigger
         ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;
         /*  a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; */
 
@@ -4472,7 +4475,7 @@ int perturb_initial_conditions(struct precision * ppr,
         alpha_prime = 0.0;
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-        printf("Inside scalar field check\n"); //trigger
+        //printf("Inside scalar field check\n"); //trigger
         ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
         ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
@@ -5548,7 +5551,7 @@ int perturb_total_stress_energy(
        species with non-zero shear.
     */
     if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations==_TRUE_) {
-      printf("pba->scf_has_perturbations == TRUE\n"); //trigger
+      //printf("pba->scf_has_perturbations == TRUE\n"); //trigger
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
