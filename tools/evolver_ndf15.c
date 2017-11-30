@@ -420,6 +420,7 @@ int evolver_ndf15(
 	  }
 	  else if(newnrm > 0.9*oldnrm){
 	    tooslow = _TRUE_;
+	    printf("Tooslow=TRUE because newnrm > 0.9*oldnrm\n");
 	    break; /*Break Newton lop */
 	  }
 	  else{
@@ -432,10 +433,12 @@ int evolver_ndf15(
 	    }
 	    else if (iter == maxit){
 	      tooslow = _TRUE_;
+	      printf("Tooslow=TRUE because iter == maxit\n");
 	      break; /*exit newton */
 	    }
 	    else if (0.5*rtol < errit*pow(rate,(maxit-iter))){
 	      tooslow = _TRUE_;
+	      printf("Tooslow=TRUE because 0.5*rtol < errit*pow(rate,(maxit-iter))\n");
 	      break; /*exit Newton */
 	    }
 	  }
@@ -445,6 +448,7 @@ int evolver_ndf15(
 	  stepstat[1] += 1;
 	  /*	! Speed up the iteration by forming new linearization or reducing h. */
 	  if (Jcurrent==_FALSE_){
+	  	printf("tooslow == True, attempting to speed up if Jcurrent==FALSE\n");
 	    class_call((*derivs)(t,y+1,f0+1,parameters_and_workspace_for_derivs,error_message),
 		       error_message,error_message);
 	    nfenj=0;
@@ -456,11 +460,13 @@ int evolver_ndf15(
 	    Jcurrent = _TRUE_;
 	  }
 	  else if (absh <= hmin){
+	    printf("tooslow == True, Jcurrent != False. absh<= hmin. Cannot speed up. Crashing\n");
 	    class_test(absh <= hmin, error_message,
 		       "Step size too small: step:%g, minimum:%g, in interval: [%g:%g]\n",
 		       absh,hmin,t0,tfinal);
 	  }
 	  else{
+	  	printf("tooslow == True, Jcurrent!=FALSE, absh !<= hmin. Changing step size\n");
 	    abshlast = absh;
 	    absh = MAX(0.3 * absh, hmin);
 	    h = tdir * absh;
@@ -487,6 +493,8 @@ int evolver_ndf15(
 	/*Step failed */
 	stepstat[1]+= 1;
 	if (absh <= hmin){
+		printf("tooslow == True, new step failed. Crashing.\n");
+
 	  class_test(absh <= hmin, error_message,
 		     "Step size too small: step:%g, minimum:%g, in interval: [%g:%g]\n",
 		     absh,hmin,t0,tfinal);
@@ -524,7 +532,8 @@ int evolver_ndf15(
 	stepstat[4] += 1;
 	havrate = _FALSE_;
       }
-      else {
+      else {printf("Completed successful step \n");
+
 	break; /* Succesfull step */
       }
     }

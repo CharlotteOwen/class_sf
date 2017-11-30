@@ -1072,7 +1072,7 @@ int input_read_parameters(
     Omega_tot += pba->Omega0_scf;
     printf("Omega0_scf (added in 'output') = %e \n", pba->Omega0_scf); //Sets Omega_scf today equal to users input
   }
-  /* Step 2 */
+  /* Step 2 */ ///COComment - this is where we should switch to varying CDM density if needed
   if (flag1 == _FALSE_) {
     //Fill with Lambda
     pba->Omega0_lambda= 1. - pba->Omega0_k - Omega_tot;
@@ -1207,6 +1207,18 @@ int input_read_parameters(
         pba->phi_prime_ini_scf = pba->scf_parameters[pba->scf_parameters_size-1];
       }
     }
+    class_call(parser_read_string(pfc,"scf_has_perturbations",&string1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+
+    if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
+
+    pba->scf_has_perturbations = _TRUE_;
+  }
+    else if ((flag1 == _TRUE_) && ((strstr(string1,"n") != NULL) || (strstr(string1,"N") != NULL))) {
+
+    pba->scf_has_perturbations = _FALSE_;
+  }
   }
 
   /** (b) assign values to thermodynamics cosmological parameters */

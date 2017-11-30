@@ -327,7 +327,7 @@ int background_functions(
     p_tot += (1./3.)*pvecback[pba->index_bg_rho_dr];
     rho_r += pvecback[pba->index_bg_rho_dr];
   }
-  if(pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H]){ //We switch for fluid equations
+  if(pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 10*pvecback[pba->index_bg_H]){ //We switch for fluid equations
     pba->scf_fluid = _TRUE_;
     pba->scf_kg_eq = _FALSE_;
   }

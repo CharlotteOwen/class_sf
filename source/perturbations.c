@@ -220,7 +220,7 @@ int perturb_init(
   }
 
   if (ppt->has_tensors == _TRUE_) {
-
+    printf("Inside ppt has tensors = true in perturbations file");
     ppt->evolve_tensor_ur = _FALSE_;
     ppt->evolve_tensor_ncdm = _FALSE_;
 
@@ -254,7 +254,7 @@ int perturb_init(
 
 
   if (ppt->z_max_pk > pth->z_rec) {
-
+    printf("Just called perturbed indices of perturnbs in perturbations file");
     class_test(ppt->has_cmb == _TRUE_,
                ppt->error_message,
                "You requested a very high z_pk=%e, higher than z_rec=%e. This works very well when you don't ask for a calculation of the CMB source function(s). Remove any CMB from your output and try e.g. with 'output=mTk' or 'output=mTk,vTk'",
@@ -300,6 +300,7 @@ int perturb_init(
   class_alloc(pppw,number_of_threads * sizeof(struct perturb_workspace *),ppt->error_message);
 
   /** - loop over modes (scalar, tensors, etc). For each mode: */
+  printf("About to start loop over modes in perturbations file");
 
   for (index_md = 0; index_md < ppt->md_size; index_md++) {
 
@@ -669,7 +670,7 @@ int perturb_indices_of_perturbs(
           ppt->has_source_delta_dcdm = _TRUE_;
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
-        if (pba->has_scf == _TRUE_)
+        if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_)
           ppt->has_source_delta_scf = _TRUE_;
         if (pba->has_ur == _TRUE_)
           ppt->has_source_delta_ur = _TRUE_;
@@ -695,7 +696,7 @@ int perturb_indices_of_perturbs(
           ppt->has_source_theta_dcdm = _TRUE_;
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
-        if (pba->has_scf == _TRUE_)
+        if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_)
           ppt->has_source_theta_scf = _TRUE_;
         if (pba->has_ur == _TRUE_)
           ppt->has_source_theta_ur = _TRUE_;
@@ -3510,13 +3511,16 @@ int perturb_vector_init(
         }
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
 
         ppv->y[ppv->index_pt_phi_scf] =
           ppw->pv->y[ppw->pv->index_pt_phi_scf];
 
         ppv->y[ppv->index_pt_phi_prime_scf] =
           ppw->pv->y[ppw->pv->index_pt_phi_prime_scf];
+      }
+      else if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _FALSE_){
+        printf("No perturbations requested for scalar field");
       }
 
       if (ppt->gauge == synchronous)
@@ -4226,7 +4230,7 @@ int perturb_initial_conditions(struct precision * ppr,
         /* if use_ppf == _TRUE_, y[ppw->pv->index_pt_Gamma_fld] will be automatically set to zero, and this is what we want (although one could probably work out some small nonzero initial conditions: TODO) */
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations ==_TRUE_) {
         /** - ---> Canonical field (solving for the perturbations):
          *  initial perturbations set to zero, they should reach the attractor soon enough.
          *  - --->  TODO: Incorporate the attractor IC from 1004.5509.
@@ -4235,7 +4239,7 @@ int perturb_initial_conditions(struct precision * ppr,
          *  and assume theta, delta_rho as for perfect fluid
          *  with \f$ c_s^2 = 1 \f$ and w = 1/3 (ASSUMES radiation TRACKING)
         */
-
+        printf("We have called the scf perturbations");
         ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;
         /*  a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; */
 
@@ -4464,11 +4468,11 @@ int perturb_initial_conditions(struct precision * ppr,
       }
 
       /* scalar field: check */
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations==_TRUE_) {
         alpha_prime = 0.0;
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-
+        printf("Inside scalar field check");
         ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
         ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
@@ -5541,7 +5545,7 @@ int perturb_total_stress_energy(
        from rho_plus_p_shear. So the contribution from the scalar field must be below all
        species with non-zero shear.
     */
-    if (pba->has_scf == _TRUE_) {
+    if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations==_TRUE_) {
 
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
@@ -6544,7 +6548,7 @@ int perturb_print_variables(double tau,
       shear_dr = y[ppw->pv->index_pt_F0_dr+2]*0.5/f_dr;
     }
 
-    if (pba->has_scf == _TRUE_){
+    if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations== _TRUE_){
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
@@ -6603,7 +6607,7 @@ int perturb_print_variables(double tau,
         theta_dcdm += k*k*alpha;
       }
 
-      if (pba->has_scf == _TRUE_) {
+      if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
         delta_scf += alpha*(-3.0*H*(1.0+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]));
         theta_scf += k*k*alpha;
       }
@@ -7327,7 +7331,7 @@ int perturb_derivs(double tau,
 
     /** - ---> scalar field (scf) */
 
-    if (pba->has_scf == _TRUE_) {
+    if (pba->has_scf == _TRUE_ && pba -> scf_has_perturbations == _TRUE_) {
 
       /** - ----> field value */
 
