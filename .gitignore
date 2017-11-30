@@ -1,2 +1,5 @@
 build/ 
 output/
+class
+*.ini
+class.dSYM/

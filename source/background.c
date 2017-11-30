@@ -272,7 +272,7 @@ int background_functions(
   double a;
   /* scalar field quantities */
   double phi = 0, phi_prime = 0;
-  printf("Inside background_functions.\n");//print_trigger
+  //printf("Inside background_functions.\n");//print_trigger
   /** - initialize local variables */
   a = pvecback_B[pba->index_bi_a];
   rho_tot = 0.;
@@ -284,7 +284,7 @@ int background_functions(
   class_test(a_rel <= 0.,
              pba->error_message,
              "a = %e instead of strictly positive",a_rel);
-  printf("Checked a is positive - success. Passing a to output. \n");//print_trigger
+  //printf("Checked a is positive - success. Passing a to output. \n");//print_trigger
   /** - pass value of \f$ a\f$ to output */
   pvecback[pba->index_bg_a] = a;
 
@@ -301,10 +301,10 @@ int background_functions(
   rho_tot += pvecback[pba->index_bg_rho_b];
   p_tot += 0;
   rho_m += pvecback[pba->index_bg_rho_b];
-  printf("About to enter 'if has_x ' section.\n");//print_trigger
+  //printf("About to enter 'if has_x ' section.\n");//print_trigger
   /* cdm */
   if (pba->has_cdm == _TRUE_) {
-    printf("Inside has_cdm.\n");//print_trigger
+    //printf("Inside has_cdm.\n");//print_trigger
     pvecback[pba->index_bg_rho_cdm] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a_rel,3);
     rho_tot += pvecback[pba->index_bg_rho_cdm];
     p_tot += 0.;
@@ -336,10 +336,10 @@ int background_functions(
     pba->scf_fluid = _FALSE_;
     pba->scf_kg_eq = _TRUE_;
   }
-  printf("Scalar field? %f \n", pba->has_scf);
+  //printf("Scalar field? %f \n", pba->has_scf);//print_trigger
   /* Scalar field */
   if (pba->has_scf == _TRUE_ && pba->scf_kg_eq == _TRUE_) {
-    printf("Inside scf table update\n");
+    //printf("Inside scf table update\n"); //print_trigger
     phi = pvecback_B[pba->index_bi_phi_scf];
     phi_prime = pvecback_B[pba->index_bi_phi_prime_scf];
     //At this point phi and phi prime have already been updated, from their evolution equations, rho_scf is still from the last step,
@@ -375,7 +375,7 @@ int background_functions(
     //printf("phi is %e\n rho_scf is %e \n", phi, pvecback[pba->index_bg_rho_scf]);
 
   }
-  printf("Scalar field? %f \n", pba->has_scf);
+  //printf("Scalar field? %f \n", pba->has_scf); //print_trigger
 
 
   /* ncdm */
@@ -478,7 +478,7 @@ int background_functions(
     /*  */
 
   }
-  printf("End of background functions.\n");
+  //printf("End of background functions.\n");//print_trigger
   return _SUCCESS_;
 
 }
@@ -1551,17 +1551,17 @@ int background_solve(
              pba->error_message);
 
   /** - impose initial conditions with background_initial_conditions() */
-  printf("Inside background_solve. Calling background_initial_conditions.\n");//print_trigger
+  //printf("Inside background_solve. Calling background_initial_conditions.\n");//print_trigger
   class_call(background_initial_conditions(ppr,pba,pvecback,pvecback_integration),
              pba->error_message,
              pba->error_message);
-  printf("background_initial_conditions was successful.\n");//print_trigger
+  //printf("background_initial_conditions was successful.\n");//print_trigger
   /* here tau_end is in fact the initial time (in the next loop
      tau_start = tau_end) */
-  printf("Set tau_end.\n");//print_trigger
+  //printf("Set tau_end.\n");//print_trigger
   tau_end=pvecback_integration[pba->index_bi_tau];
-  printf("tau_end = %e\n",tau_end);//print_trigger
-  printf("About to create a growTable with gt_init.\n");//print_trigger
+  //printf("tau_end = %e\n",tau_end);//print_trigger
+  //printf("About to create a growTable with gt_init.\n");//print_trigger
   /** - create a growTable with gt_init() */
   class_call(gt_init(&gTable),
              gTable.error_message,
@@ -1569,15 +1569,15 @@ int background_solve(
 
   /* initialize the counter for the number of steps */
   pba->bt_size=0;
-  printf("Set counter for number of steps to zero.\n");//print_trigger
+  //printf("Set counter for number of steps to zero.\n");//print_trigger
   /** - loop over integration steps: call background_functions(), find step size, save data in growTable with gt_add(), perform one step with generic_integrator(), store new value of tau */
 
   while (pvecback_integration[pba->index_bi_a] < pba->a_today) {
 
     tau_start = tau_end;
-    printf("Inside while a < a_0 loop. Set tau_start = tau_end. \n");//print_trigger
+    //printf("Inside while a < a_0 loop. Set tau_start = tau_end. \n");//print_trigger
     /* -> find step size (trying to adjust the last step as close as possible to the one needed to reach a=a_today; need not be exact, difference corrected later) */
-    printf("About to call background_functions.\n"); //print_trigger
+    //printf("About to call background_functions.\n"); //print_trigger
     class_call(background_functions(pba,pvecback_integration, pba->short_info, pvecback),
                pba->error_message,
                pba->error_message);
@@ -1585,24 +1585,24 @@ int background_solve(
     if ((pvecback_integration[pba->index_bi_a]*(1.+ppr->back_integration_stepsize)) < pba->a_today) {
       tau_end = tau_start + ppr->back_integration_stepsize / (pvecback_integration[pba->index_bi_a]*pvecback[pba->index_bg_H]);
       /* no possible segmentation fault here: non-zeroness of "a" has been checked in background_functions() */
-    printf("Inside if statement where apparently no segmentation fault possible.\n");//print_trigger
+    //printf("Inside if statement where apparently no segmentation fault possible.\n");//print_trigger
     }
     else {
       tau_end = tau_start + (pba->a_today/pvecback_integration[pba->index_bi_a]-1.) / (pvecback_integration[pba->index_bi_a]*pvecback[pba->index_bg_H]);
       /* no possible segmentation fault here: non-zeroness of "a" has been checked in background_functions() */
-    printf("Inside 'else' of if statement where apparently no segmentation fault possible.\n");//print_trigger
+    //printf("Inside 'else' of if statement where apparently no segmentation fault possible.\n");//print_trigger
     }
 
     class_test((tau_end-tau_start)/tau_start < ppr->smallest_allowed_variation,
                pba->error_message,
                "integration step: relative change in time =%e < machine precision : leads either to numerical error or infinite loop",(tau_end-tau_start)/tau_start);
-    printf("Calling gt_add.\n");//print_trigger
+    //printf("Calling gt_add.\n");//print_trigger
     /* -> save data in growTable */
     class_call(gt_add(&gTable,_GT_END_,(void *) pvecback_integration,sizeof(double)*pba->bi_size),
                gTable.error_message,
                pba->error_message);
     pba->bt_size++;
-    printf("Calling generic_integrator.\n");//print_trigger
+    //printf("Calling generic_integrator.\n");//print_trigger
     /* -> perform one step */
     class_call(generic_integrator(background_derivs,
                                   tau_start,
@@ -1943,7 +1943,7 @@ int background_initial_conditions(
    * - Check equations and signs. Sign of phi_prime?
    * - is rho_ur all there is early on?
    */
-  printf("Inside background_initial_conditions, checking for SF. SF? %f \n",pba->has_scf);//print_trigger
+  //printf("Inside background_initial_conditions, checking for SF. SF? %f \n",pba->has_scf);//print_trigger
   if(pba->has_scf == _TRUE_){
     scf_lambda = pba->scf_parameters[0];
     if(pba->attractor_ic_scf == _TRUE_){
@@ -1998,7 +1998,7 @@ int background_initial_conditions(
   class_test(pvecback[pba->index_bg_H] <= 0.,
              pba->error_message,
              "H = %e instead of strictly positive",pvecback[pba->index_bg_H]);
-  printf("Setting initial conditions.\n");//print_trigger
+  //printf("Setting initial conditions.\n");//print_trigger
   pvecback_integration[pba->index_bi_time] = 1./(2.* pvecback[pba->index_bg_H]);
 
   /** - compute initial conformal time, assuming radiation-dominated
@@ -2012,7 +2012,7 @@ int background_initial_conditions(
   /** - set initial value of D and D' in RD. D will be renormalised later, but D' must be correct. */
   pvecback_integration[pba->index_bi_D] = a;
   pvecback_integration[pba->index_bi_D_prime] = 2*pvecback_integration[pba->index_bi_D]*pvecback[pba->index_bg_H];
-  printf("Success.\n");//print_trigger
+  //printf("Success.\n");//print_trigger
   return _SUCCESS_;
 
 }
