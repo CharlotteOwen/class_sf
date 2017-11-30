@@ -4554,7 +4554,7 @@ int input_get_guess(double *xguess,
       if (ba.scf_tuning_index == 1 && (ba.scf_potential == axionquad) ){
         xguess[index_guess] = 0.01*1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
         //xguess[index_guess] =1e-8;
-        dxdy[index_guess] = 0.1; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
+        dxdy[index_guess] = xguess[index_guess]/2; //0.1; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
         printf("index 0, x = %g, dxdy = %g\n",*xguess,*dxdy);
         printf("Used Omega_scf = %e Omega_g = %e\n", ba.Omega0_scf, ba.Omega0_g);
 
@@ -4687,14 +4687,16 @@ int input_find_root(double *xzero,
       //   fprintf(fp,pfzw->bachground.phi_scf)
       // }
       // fclosef(fp);
-        printf("Breaking because successful");
+        printf("Successfully ran background");
         printf("f1 = %e, f2 = %e\n",f1,f2);
         printf("f1+f2 = %e\n", f1+f2);
         break;
       }
       else if (iter2 < 3) {
+        printf("Inside if statement: iter2<3, changing dx: ");
         dx*=0.5;
         x2 = x1-dx;
+        printf("dx = %e, x2 = %e \n", dx, x2);
       }
       else {
         //fprintf(stderr,"get here\n");
@@ -4759,7 +4761,7 @@ int input_find_root(double *xzero,
 ////}
 
   /** - Find root using Ridders method. (Exchange for bisection if you are old-school.)*/
-  printf("Unable to find root, next line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
+  printf("Next line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
   class_call(class_fzero_ridder(input_fzerofun_1d,
                                 x1,
                                 x2,

@@ -3520,7 +3520,7 @@ int perturb_vector_init(
           ppw->pv->y[ppw->pv->index_pt_phi_prime_scf];
       }
       else if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _FALSE_){
-        printf("No perturbations requested for scalar field");
+        printf("No perturbations requested for scalar field"); //trigger
       }
 
       if (ppt->gauge == synchronous)
@@ -4239,7 +4239,7 @@ int perturb_initial_conditions(struct precision * ppr,
          *  and assume theta, delta_rho as for perfect fluid
          *  with \f$ c_s^2 = 1 \f$ and w = 1/3 (ASSUMES radiation TRACKING)
         */
-        printf("We have called the scf perturbations");
+        printf("We have called the scf perturbations\n"); //trigger
         ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;
         /*  a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; */
 
@@ -4472,7 +4472,7 @@ int perturb_initial_conditions(struct precision * ppr,
         alpha_prime = 0.0;
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-        printf("Inside scalar field check");
+        printf("Inside scalar field check\n"); //trigger
         ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
         ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
@@ -5113,6 +5113,7 @@ int perturb_einstein(
   double shear_g = 0.;
   double dmu_gcdm = 0;
   /** - define wavenumber and scale factor related quantities */
+  //printf("Perturb_Einstein has been called\n"); //trigger
 
   k2 = k*k;
   a = ppw->pvecback[pba->index_bg_a];
@@ -5338,8 +5339,9 @@ int perturb_total_stress_energy(
   k2 = k*k;
 
   /** - for scalar modes */
-
+  //printf("Perturb_total_stress_energy has been called, this contains scf contributions, if turned on\n"); //trigger
   if (_scalars_) {
+    //printf("Inside 'scalars' within Perturb_total_stress_energy\n"); //trigger
 
     /** - --> (a) deal with approximation schemes */
 
@@ -5546,7 +5548,7 @@ int perturb_total_stress_energy(
        species with non-zero shear.
     */
     if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations==_TRUE_) {
-
+      printf("pba->scf_has_perturbations == TRUE\n"); //trigger
       if (ppt->gauge == synchronous){
         delta_rho_scf =  1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
@@ -5887,6 +5889,7 @@ int perturb_sources(
   pvecmetric = ppw->pvecmetric;
 
   /** - get background/thermo quantities in this point */
+  //printf("Perturb_sources has been called, should only be required if requested more than just T Cls, this contains scf contributions, if turned on\n"); //trigger
 
   class_call(background_at_tau(pba,
                                tau,
@@ -6917,6 +6920,7 @@ int perturb_derivs(double tau,
   pv = ppw->pv;
 
   /** - get background/thermo quantities in this point */
+  //printf("Perturb_derivs has been called, this calls other modules\n"); //trigger
 
   class_call(background_at_tau(pba,
                                tau,
@@ -7332,7 +7336,7 @@ int perturb_derivs(double tau,
     /** - ---> scalar field (scf) */
 
     if (pba->has_scf == _TRUE_ && pba -> scf_has_perturbations == _TRUE_) {
-
+      printf("scf_has_perts == TRUE in perturb_derivs ");
       /** - ----> field value */
 
       dy[pv->index_pt_phi_scf] = y[pv->index_pt_phi_prime_scf];
