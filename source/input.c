@@ -562,8 +562,8 @@ int input_read_parameters(
 
   /** - define local variables */
 
-  int flag1,flag2,flag3;
-  double param1,param2,param3;
+  int flag1,flag2,flag3,flag4,flag5; //COcdmchange added flags 4 and 5 
+  double param1,param2,param3,param4,param5; //COcdmchange added params 4 and 5
   int N_ncdm=0,n,entries_read;
   int int1,fileentries;
   double scf_lambda;
@@ -790,21 +790,22 @@ int input_read_parameters(
   Omega_tot += pba->Omega0_ur;
 
   /** - Omega_0_cdm (CDM) */
-  class_call(parser_read_double(pfc,"Omega_cdm",&param1,&flag1,errmsg),
-             errmsg,
-             errmsg);
-  class_call(parser_read_double(pfc,"omega_cdm",&param2,&flag2,errmsg),
-             errmsg,
-             errmsg);
-  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
-             errmsg,
-             "In input file, you can only enter one of Omega_cdm or omega_cdm, choose one");
-  if (flag1 == _TRUE_)
-    pba->Omega0_cdm = param1;
-  if (flag2 == _TRUE_)
-    pba->Omega0_cdm = param2/pba->h/pba->h;
+  // class_call(parser_read_double(pfc,"Omega_cdm",&param1,&flag1,errmsg),
+  //            errmsg,
+  //            errmsg);
+  // class_call(parser_read_double(pfc,"omega_cdm",&param2,&flag2,errmsg),
+  //            errmsg,
+  //            errmsg);
+  // class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+  //            errmsg,
+  //            "In input file, you can only enter one of Omega_cdm or omega_cdm, choose one");
+  // if (flag1 == _TRUE_)
+  //   pba->Omega0_cdm = param1;
+  // if (flag2 == _TRUE_)
+  //   pba->Omega0_cdm = param2/pba->h/pba->h;
 
-  Omega_tot += pba->Omega0_cdm;
+  // Omega_tot += pba->Omega0_cdm; //COcdmchange - commented out here, it is now read in on line 1076 as an option for filling.
+
 
   /** - Omega_0_dcdmdr (DCDM) */
   class_call(parser_read_double(pfc,"Omega_dcdmdr",&param1,&flag1,errmsg),
@@ -1043,11 +1044,19 @@ int input_read_parameters(
   class_call(parser_read_double(pfc,"Omega_scf",&param3,&flag3,errmsg),
              errmsg,
              errmsg);
-
-  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_) && ((flag3 == _FALSE_) || (param3 >= 0.)),
+  class_call(parser_read_double(pfc,"Omega_cdm",&param4,&flag4,errmsg),
              errmsg,
-             "In input file, either Omega_Lambda or Omega_fld must be left unspecified, except if Omega_scf is set and <0.0, in which case the contribution from the scalar field will be the free parameter.");
+             errmsg); //COcdmchange
+  class_call(parser_read_double(pfc,"omega_cdm",&param5,&flag5,errmsg),
+             errmsg,
+             errmsg); //COcdmchange
 
+  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_) && (flag4 == _TRUE_ || flag5 == _TRUE_) && ((flag3 == _FALSE_) || (param3 >= 0.)),
+             errmsg,
+             "In input file, either Omega_Lambda or Omega_fld or Omega_cdm must be left unspecified, except if Omega_scf is set and <0.0, in which case the contribution from the scalar field will be the free parameter.");
+  class_test(((flag4 == _TRUE_) && (flag5 == _TRUE_)),
+             errmsg,
+             "In input file, you can only enter one of Omega_cdm or omega_cdm, choose one"); //COcdmchange
   /** - --> (flag3 == _FALSE_) || (param3 >= 0.) explained:
    *  it means that either we have not read Omega_scf so we are ignoring it
    *  (unlike lambda and fld!) OR we have read it, but it had a
@@ -1072,6 +1081,15 @@ int input_read_parameters(
     Omega_tot += pba->Omega0_scf;
     printf("Omega0_scf (added in 'output') = %e \n", pba->Omega0_scf); //Sets Omega_scf today equal to users input
   }
+  if (flag4 == _TRUE_){
+    pba->Omega0_cdm = param4;
+    Omega_tot += pba->Omega0_cdm;
+  }  //COcdmchange
+  if (flag5 == _TRUE_){
+    pba->Omega0_cdm = param5/pba->h/pba->h;
+    Omega_tot += pba->Omega0_cdm;
+  }   //COcdmchange
+
   /* Step 2 */
   if (flag1 == _FALSE_) {
     //Fill with Lambda
@@ -1088,7 +1106,11 @@ int input_read_parameters(
     pba->Omega0_scf = 1. - pba->Omega0_k - Omega_tot;
     if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_scf = %e\n",pba->Omega0_scf);
   }
-  
+  else if (flag4 == _FALSE_ || flag5 == _FALSE_) {
+    // Fill up with fluid
+    pba->Omega0_cdm = 1. - pba->Omega0_k - Omega_tot;
+    if (input_verbose > 0) printf(" -> matched budget equations by adjusting Omega_cdm = %e\n",pba->Omega0_cdm);
+  } //COcdmchange
   
   fprintf(stderr,"%e %e %e %e %e\n",
           pba->Omega0_lambda,
