@@ -1798,7 +1798,9 @@ int background_solve(
 
   free(pvecback);
   free(pvecback_integration);
-
+  pba->scf_fluid = _FALSE_;
+  pba->scf_kg_eq = _TRUE_; // COpertchange
+  printf("Finished background computation, resetting scf flags to KG.\n"); //print_trigger
   return _SUCCESS_;
 
 }

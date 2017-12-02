@@ -103,6 +103,7 @@ struct perturbs
 
   short has_perturbations; /**< do we need to compute perturbations at all ? */
 
+  short scf_fluid_flag_perts; /** how do we evolve scalar perts? */
   short has_cls; /**< do we need any harmonic space spectrum \f$ C_l \f$ (and hence Bessel functions, transfer functions, ...)? */
 
   short has_scalars; /**< do we need scalars? */
@@ -408,6 +409,8 @@ struct perturb_vector
   int index_pt_Gamma_fld;  /**< unique dark energy dynamical variable in PPF case */
   int index_pt_phi_scf;  /**< scalar field density */
   int index_pt_phi_prime_scf;  /**< scalar field velocity */
+  int index_pt_delta_scf; /**< scf density for fluid */
+  int index_pt_theta_scf; /**< scf velocity */
   int index_pt_delta_ur; /**< density of ultra-relativistic neutrinos/relics */
   int index_pt_theta_ur; /**< velocity of ultra-relativistic neutrinos/relics */
   int index_pt_shear_ur; /**< shear of ultra-relativistic neutrinos/relics */

@@ -137,6 +137,7 @@ int perturb_init(
 #endif
 
   /** - perform preliminary checks */
+  printf("Flag for fluid equations is %d\n",pba->scf_fluid); //print_trigger
 
   if (ppt->has_perturbations == _FALSE_) {
     if (ppt->perturbations_verbose > 0)
@@ -371,10 +372,14 @@ int perturb_init(
 
           if ((ppt->perturbations_verbose > 2) && (abort == _FALSE_)) {
             printf("evolving mode k=%e /Mpc  (%d/%d)",ppt->k[index_md][index_k],index_k+1,ppt->k_size[index_md]);
-            if (pba->sgnK != 0)
+            if (pba->sgnK != 0){
               printf(" (for scalar modes, corresponds to nu=%e)",sqrt(ppt->k[index_md][index_k]*ppt->k[index_md][index_k]+pba->K)/sqrt(pba->sgnK*pba->K));
             printf("\n");
-          }
+            }
+            printf("Setting fluid flag to false for scalar perts.\n");
+            ppt->scf_fluid_flag_perts = _FALSE_;
+          } //COpertchange
+          
 
 #ifdef _OPENMP
           tstart = omp_get_wtime();
@@ -408,7 +413,7 @@ int perturb_init(
 #endif
 
       } /* end of parallel region */
-
+      printf("abort = true? %d",abort); //print_trigger
       if (abort == _TRUE_) return _FAILURE_;
 
     } /* end of loop over initial conditions */
@@ -2418,7 +2423,7 @@ int perturb_solve(
     else{
       generic_evolver = evolver_ndf15;
     }
-
+    printf("About to call generic evolver with perturb derivs as the argument \n ");
     class_call(generic_evolver(perturb_derivs,
                                interval_limit[index_interval],
                                interval_limit[index_interval+1],
@@ -2530,7 +2535,7 @@ int perturb_prepare_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles, "delta_dr", pba->has_dr);
       class_store_columntitle(ppt->scalar_titles, "theta_dr", pba->has_dr);
       class_store_columntitle(ppt->scalar_titles, "shear_dr", pba->has_dr);
-      /* Scalar field scf */
+      /* Scalar field scf, initialised regardless of fluid flag. */
       if (pba->scf_has_perturbations == _TRUE_){
       class_store_columntitle(ppt->scalar_titles, "delta_scf", pba->has_scf);
       class_store_columntitle(ppt->scalar_titles, "theta_scf", pba->has_scf);
@@ -3013,6 +3018,7 @@ int perturb_vector_init(
   /** - define all indices in this new vector (depends on approximation scheme, described by the input structure ppw-->pa) */
 
   index_pt = 0;
+  printf("Inside perturb vector init\n"); //print_trigger
 
   if (_scalars_) {
 
@@ -3076,7 +3082,7 @@ int perturb_vector_init(
 
     class_define_index(ppv->index_pt_delta_cdm,pba->has_cdm,index_pt,1); /* cdm density */
     class_define_index(ppv->index_pt_theta_cdm,pba->has_cdm && (ppt->gauge == newtonian),index_pt,1); /* cdm velocity */
-
+    
     /* dcdm */
 
     class_define_index(ppv->index_pt_delta_dcdm,pba->has_dcdm,index_pt,1); /* dcdm density */
@@ -3102,6 +3108,8 @@ int perturb_vector_init(
     if (pba->scf_has_perturbations == _TRUE_){
     class_define_index(ppv->index_pt_phi_scf,pba->has_scf,index_pt,1); /* scalar field density */
     class_define_index(ppv->index_pt_phi_prime_scf,pba->has_scf,index_pt,1); /* scalar field velocity */
+    class_define_index(ppv->index_pt_delta_scf,pba->has_scf,index_pt,1); /* scf density (velocity zero in synchronous gauge)*/ //COpertchange
+    class_define_index(ppv->index_pt_theta_scf,pba->has_scf,index_pt,1); /* scf velocity */
     }
     /* perturbed recombination: the indices are defined once tca is off. */
     if ( (ppt->has_perturbed_recombination == _TRUE_) && (ppw->approx[ppw->index_ap_tca] == (int)tca_off) ){
@@ -3445,10 +3453,12 @@ int perturb_vector_init(
   /** - case of switching approximation while a wavenumber is being integrated */
 
   else {
+    printf("Exited perturb initial conditions, still inside perturb approx\n"); //print_trigger
 
     /** - --> (a) for the scalar mode: */
 
     if (_scalars_) {
+      printf("Inside perturb approx, inside scalars \n"); //print_trigger
 
       /** - ---> (a.1.) check that the change of approximation scheme makes
           sense (note: before calling this routine there is already a
@@ -3512,12 +3522,24 @@ int perturb_vector_init(
       }
 
       if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
-
+        printf("Inside perturb approx, inside scalars, inside has_scf, initialising indexes \n"); //print_trigger
         ppv->y[ppv->index_pt_phi_scf] =
           ppw->pv->y[ppw->pv->index_pt_phi_scf];
 
         ppv->y[ppv->index_pt_phi_prime_scf] =
           ppw->pv->y[ppw->pv->index_pt_phi_prime_scf];
+
+          // initialise index for fluid //might need to omit if statement.   //COpertchange
+          if (ppt->scf_fluid_flag_perts == _TRUE_){
+
+            ppv->y[ppv->index_pt_delta_scf] =
+          ppw->pv->y[ppw->pv->index_pt_delta_scf];
+
+            if (ppt->gauge == newtonian) {
+          ppv->y[ppv->index_pt_theta_scf] =
+            ppw->pv->y[ppw->pv->index_pt_theta_scf];
+            }
+          }
       }
 
       if (ppt->gauge == synchronous)
@@ -4060,7 +4082,7 @@ int perturb_initial_conditions(struct precision * ppr,
 
   double a,a_prime_over_a;
   double w_fld,dw_over_da_fld,integral_fld;
-  double delta_ur=0.,theta_ur=0.,shear_ur=0.,l3_ur=0.,eta=0.,delta_cdm=0.,alpha, alpha_prime;
+  double delta_ur=0.,theta_ur=0.,shear_ur=0.,l3_ur=0.,eta=0.,delta_cdm=0.,delta_scf=0.,alpha, alpha_prime; //COpertchange
   double delta_dr=0;
   double q,epsilon,k2;
   int index_q,n_ncdm,idx;
@@ -4080,7 +4102,7 @@ int perturb_initial_conditions(struct precision * ppr,
     /** - (a) compute relevant background quantities: compute rho_r,
         rho_m, rho_nu (= all relativistic except photons), and their
         ratio. */
-
+    printf("Inside perturb_initial_conditions\n");
     class_call(background_at_tau(pba,
                                  tau,
                                  pba->normal_info,
@@ -4212,7 +4234,6 @@ int perturb_initial_conditions(struct precision * ppr,
 
       }
 
-
       /* fluid (assumes wa=0, if this is not the case the
          fluid will catch anyway the attractor solution) */
       if (pba->has_fld == _TRUE_) {
@@ -4236,13 +4257,18 @@ int perturb_initial_conditions(struct precision * ppr,
          *  and assume theta, delta_rho as for perfect fluid
          *  with \f$ c_s^2 = 1 \f$ and w = 1/3 (ASSUMES radiation TRACKING)
         */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;
-        /*  a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] = 0.;
+        //COpertchange - initialise the new delta we have created to zero (or same value cdm took). Does not need fluid if statement because we initialise before fluid regime.
+        // at this point synchronous gauge is presumed. Will never be applicable for delta.
+        ppw->pv->y[ppw->pv->index_pt_delta_scf] = 0.;//3./4.*ppw->pv->y[ppw->pv->index_pt_delta_scf]; /* scf density */
+        /* scf as cdm velocity vanishes in the synchronous gauge */
+        ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;//a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared; 
+        //COpertchange = 0.
+        ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] = 0.;//a*a/ppw->pvecback[pba->index_bg_phi_prime_scf]*( - ktau_two/4.*(1.+1./3.)*(4.-3.*1.)/(4.-6.*(1/3.)+3.*1.)*ppw->pvecback[pba->index_bg_rho_scf] - ppw->pvecback[pba->index_bg_dV_scf]*ppw->pv->y[ppw->pv->index_pt_phi_scf])* ppr->curvature_ini * s2_squared;
         /* delta_fld expression * rho_scf with the w = 1/3, c_s = 1
             a*a/ppw->pvecback[pba->index_bg_phi_prime_scf]*( - ktau_two/4.*(1.+1./3.)*(4.-3.*1.)/(4.-6.*(1/3.)+3.*1.)*ppw->pvecback[pba->index_bg_rho_scf] - ppw->pvecback[pba->index_bg_dV_scf]*ppw->pv->y[ppw->pv->index_pt_phi_scf])* ppr->curvature_ini * s2_squared; */
+        //COpertchange = 0.
+        printf("Initial Conditions for scalar perts in synchronous gauge: %e, %e \n",ppw->pv->y[ppw->pv->index_pt_phi_scf],ppw->pv->y[ppw->pv->index_pt_phi_prime_scf]);
+        printf("IC for fluid scalar pert in synchronous gauge: %e \n",ppw->pv->y[ppw->pv->index_pt_delta_scf]);
       }
 
       /* all relativistic relics: ur, early ncdm, dr */
@@ -4466,15 +4492,23 @@ int perturb_initial_conditions(struct precision * ppr,
 
       /* scalar field: check */
       if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
+        printf("Initial conditions. In the Newtonian guage. \n");
         alpha_prime = 0.0;
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-
-        ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
-        ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
+        if (ppt->scf_fluid_flag_perts == _FALSE_){
+          printf("fluid_flag = false. \n");
+          ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
+          ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
            -a*a* dV_scf(pba,ppw->pvecback[pba->index_bg_phi_scf])*alpha
            +ppw->pvecback[pba->index_bg_phi_prime_scf]*alpha_prime);
+        }
+        else {
+          printf("fluid_flag = true. \n");
+          ppw->pv->y[ppw->pv->index_pt_delta_scf] -= 3.*a_prime_over_a*alpha;
+          ppw->pv->y[ppw->pv->index_pt_theta_scf] = k*k*alpha;
+        }
       }
 
       if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_) || (pba->has_dr == _TRUE_)) {
@@ -4545,7 +4579,7 @@ int perturb_initial_conditions(struct precision * ppr,
 
   }
   /** --> For tensors */
-
+  printf("End of scalar ICs\n");
   if (_tensors_) {
 
     /** tensor initial conditions take into account the fact that
@@ -4675,7 +4709,7 @@ int perturb_initial_conditions(struct precision * ppr,
     }
 
   }
-
+  printf("End of initial conditions. \n "); //print_trigger
   return _SUCCESS_;
 }
 
@@ -4747,7 +4781,7 @@ int perturb_approximations(
 
   /** - evaluate background quantities with background_at_tau() and
       Hubble time scale \f$ \tau_h = a/a' \f$ */
-
+  printf("Inside perturb approx\n"); //print_trigger
   class_call(background_at_tau(pba,tau, pba->normal_info, ppw->inter_mode, &(ppw->last_index_back), ppw->pvecback),
              pba->error_message,
              ppt->error_message);
@@ -4764,7 +4798,7 @@ int perturb_approximations(
 
     /** - --> (a) evaluate thermodynamical quantities with thermodynamics_at_z() */
     // fprintf(stdout, "z %e \n", 1./ppw->pvecback[pba->index_bg_a]-1.);
-
+    printf("Flag for fluid equations is %d\n",pba->scf_fluid); //print_trigger
     class_call(thermodynamics_at_z(pba,
                                    pth,
                                    1./ppw->pvecback[pba->index_bg_a]-1.,  /* redshift z=1/a-1 */
@@ -5545,36 +5579,52 @@ int perturb_total_stress_energy(
     if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
 
       if (ppt->gauge == synchronous){
+        if (ppt->scf_fluid_flag_perts == _FALSE_){
         delta_rho_scf =  1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
            + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
         delta_p_scf = 1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
            - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
+        }
+        else {
+          printf("scf_fluid_flag_perts == TRUE but we are in the synchronous gauge! Please switch to Newtonian gauge.\n");
+        }
       }
       else{
         /* equation for psi */
-        psi = y[ppw->pv->index_pt_phi] - 4.5 * (a2/k/k) * ppw->rho_plus_p_shear;
+          if (ppt->scf_fluid_flag_perts == _FALSE_){
+          psi = y[ppw->pv->index_pt_phi] - 4.5 * (a2/k/k) * ppw->rho_plus_p_shear;
 
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
-        delta_p_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
-      }
-
+          delta_rho_scf =  1./3.*
+            (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+             + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
+             - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
+          delta_p_scf =  1./3.*
+            (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+             - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
+             - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
+          }
+          else {
+              delta_rho_scf = ppw->pvecback[pba->index_bg_rho_scf]*y[ppw->pv->index_pt_delta_scf];
+              rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_scf];
+          }
+        }
+      
       ppw->delta_rho += delta_rho_scf;
-
-      ppw->rho_plus_p_theta +=  1./3.*
-        k*k/a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_scf];
 
       ppw->delta_p += delta_p_scf;
 
+      if (ppt->scf_fluid_flag_perts == _FALSE_){
+      ppw->rho_plus_p_theta +=  1./3.*
+        k*k/a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_scf];
       rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_scf]+ppw->pvecback[pba->index_bg_p_scf];
-
+      }
+      else {
+        rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_scf]; // rho_plus_p_theta only needed for Newtonian
+        if (ppt->gauge == newtonian)
+          ppw->rho_plus_p_theta = ppw->rho_plus_p_theta + ppw->pvecback[pba->index_bg_rho_scf]*y[ppw->pv->index_pt_theta_scf];        
+      }
     }
 
     /* add your extra species here */
@@ -6141,18 +6191,23 @@ int perturb_sources(
 
     /* delta_scf */
     if (ppt->has_source_delta_scf == _TRUE_) {
-      if (ppt->gauge == synchronous){
-        delta_rho_scf =  1./3.*
-          (1./a2_rel*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
+      if (ppt->scf_fluid_flag_perts == _TRUE_){
+      _set_source_(ppt->index_tp_delta_scf) = y[ppw->pv->index_pt_delta_scf];
       }
       else{
-        delta_rho_scf =  1./3.*
-          (1./a2_rel*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2_rel*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi]);
+        if (ppt->gauge == synchronous){
+          delta_rho_scf =  1./3.*
+            (1./a2_rel*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+             + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
+        }
+        else{
+          delta_rho_scf =  1./3.*
+            (1./a2_rel*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+             + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
+             - 1./a2_rel*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi]);
+        }
+        _set_source_(ppt->index_tp_delta_scf) = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
       }
-      _set_source_(ppt->index_tp_delta_scf) = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
     }
 
     /* delta_dr */
@@ -6214,10 +6269,15 @@ int perturb_sources(
 
     /* theta_scf */
     if (ppt->has_source_theta_scf == _TRUE_) {
+      if (ppt->scf_fluid_flag_perts == _FALSE_){
       rho_plus_p_theta_scf = 1./3.*
         k*k/a2_rel*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_scf];
       _set_source_(ppt->index_tp_theta_scf) = rho_plus_p_theta_scf/
         (pvecback[pba->index_bg_rho_scf]+pvecback[pba->index_bg_p_scf]);
+      }
+      else {
+        _set_source_(ppt->index_tp_theta_cdm) = y[ppw->pv->index_pt_theta_cdm];
+      }
     }
 
     /* theta_dr */
@@ -6546,24 +6606,36 @@ int perturb_print_variables(double tau,
     }
 
     if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_){
-      if (ppt->gauge == synchronous){
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
+      //If we are following KG:
+      if (ppt->scf_fluid_flag_perts == _FALSE_){
+        if (ppt->gauge == synchronous){
+            delta_rho_scf =  1./3.*
+              (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+               + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
+          }
+        else{
+          delta_rho_scf =  1./3.*
+            (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
+              + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
+              - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi]);
+          }
+
+        rho_plus_p_theta_scf =  1./3.*
+          k*k/a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_scf];
+
+          delta_scf = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
+          theta_scf = rho_plus_p_theta_scf/(pvecback[pba->index_bg_rho_scf]+pvecback[pba->index_bg_p_scf]);
+        }
+      //If we are behaving as a fluid, mimicking CDM:
+      else {
+        delta_scf = y[ppw->pv->index_pt_delta_scf];
+        if (ppt->gauge == synchronous) {
+          theta_scf = 0.;
+        }
+        else {
+          theta_scf = y[ppw->pv->index_pt_theta_scf];
+        }
       }
-      else{
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi]);
-      }
-
-      rho_plus_p_theta_scf =  1./3.*
-        k*k/a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_scf];
-
-      delta_scf = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
-      theta_scf = rho_plus_p_theta_scf/(pvecback[pba->index_bg_rho_scf]+pvecback[pba->index_bg_p_scf]);
-
     }
 
     /* converting synchronous variables to newtonian ones */
@@ -6955,6 +7027,7 @@ int perturb_derivs(double tau,
   a_prime_over_a = pvecback[pba->index_bg_H] * a;
   R = 4./3. * pvecback[pba->index_bg_rho_g]/pvecback[pba->index_bg_rho_b];
   Sinv = 4./3. * pvecback[pba->index_bg_rho_g]/pvecback[pba->index_bg_rho_cdm];
+
   if(pth->u_gcdm != 0. || pth->beta_gcdm != 0.) dmu_gcdm = pvecthermo[pth->index_th_dmu_gcdm];
   else dmu_gcdm = 0;
   /** - Compute 'generalised cotK function of argument \f$ \sqrt{|K|}*\tau \f$, for closing hierarchy.
@@ -7063,6 +7136,9 @@ int perturb_derivs(double tau,
     }
 
     /** - --> (e) BEGINNING OF ACTUAL SYSTEM OF EQUATIONS OF EVOLUTION */
+    if(pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->scf_has_perturbations == _TRUE_ ){
+        ppt->scf_fluid_flag_perts = _TRUE_;
+      }
 
     /* Note concerning perturbed recombination: $cb2*delta_b$ must be replaced everywhere by $cb2*(delta_b+delta_temp)$. If perturbed recombination is not required, delta_temp is equal to zero. */
 
@@ -7330,17 +7406,32 @@ int perturb_derivs(double tau,
     /** - ---> scalar field (scf) */
 
     if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
-
+      if (ppt->scf_fluid_flag_perts == _FALSE_){
+        //printf("Evolving as KG, 3H = %e, m = %e. \n",3*ppw->pvecback[pba->index_bg_H],pba->scf_parameters[0]);
       /** - ----> field value */
-
       dy[pv->index_pt_phi_scf] = y[pv->index_pt_phi_prime_scf];
-
       /** - ----> Klein Gordon equation */
-
       dy[pv->index_pt_phi_prime_scf] =  - 2.*a_prime_over_a*y[pv->index_pt_phi_prime_scf]
         - metric_continuity*pvecback[pba->index_bg_phi_prime_scf] //  metric_continuity = h'/2
         - (k2 + a2*pvecback[pba->index_bg_ddV_scf])*y[pv->index_pt_phi_scf]; //checked
+      }
+      else if (ppt->scf_fluid_flag_perts == _TRUE_){ //COpertchange
+        /** In synchronous gauge, only need density, velocity set to zero **/
+        /** - ----> newtonian gauge: cdm density and velocity */
+        if (ppt->gauge == newtonian) {
+          dy[pv->index_pt_delta_scf] = -(y[pv->index_pt_theta_scf]+metric_continuity); /* cdm density */
 
+          dy[pv->index_pt_theta_scf] = - a_prime_over_a*y[pv->index_pt_theta_scf] + metric_euler; /* cdm velocity */
+          if(pth->u_gcdm != 0. || pth->beta_gcdm != 0) dy[pv->index_pt_theta_cdm] -= Sinv*dmu_gcdm*(y[pv->index_pt_theta_cdm]-theta_g);
+        }
+
+      /** - ----> synchronous gauge: cdm density only (velocity set to zero by definition of the gauge) */
+
+        if (ppt->gauge == synchronous) {
+          printf("Evolving as fluid, 3H = %e, m = %e. \n",3*ppw->pvecback[pba->index_bg_H],pba->scf_parameters[0]); //print_trigger
+          dy[pv->index_pt_delta_scf] = -metric_continuity; /* cdm density */
+        }  
+      }
     }
 
     /** - ---> ultra-relativistic neutrino/relics (ur) */
