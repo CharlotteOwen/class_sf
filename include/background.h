@@ -25,7 +25,8 @@ enum scf_pot{
   pol_times_exp, /** scf_potential set to pol_times_exp:V equals ((\phi-B)^\alpha + A)exp(-lambda*phi), see http://arxiv.org/abs/astro-ph/9908085.*/
   double_exp, /** scf_potential set to double_exp: V equals \Lambda_1^4e^{-\lambda\phi}+\Lambda_2^4e^{-\mu\phi} */
   axion, /** scf_potential set to axion: V equals m^2f^2(1-cos(phi/f)) */
-  axionquad /* scf_potential set to axion quadratic form: V = m^2phi^2/2 */
+  axionquad, /* scf_potential set to axion quadratic form: V = m^2phi^2/2 */
+  ax_cos_cubed
 };
 struct background
 {
@@ -81,6 +82,7 @@ struct background
   double Omega_ini_dcdm;    /**< \f$ \Omega_{ini,dcdm} \f$: rescaled initial value for dcdm density (see 1407.2418 for definitions) */
 
   double Omega0_scf;        /**< \f$ \Omega_{0 scf} \f$: scalar field */
+  double fluid_scf_wanted;  /** set to 0 to only evolve KG equations, otherwise - switch to fluid when necessary*/
   short attractor_ic_scf;   /**< whether the scalar field has attractor initial conditions */
   double phi_ini_scf;       /**< \f$ \phi(t_0) \f$: scalar field initial value */
   double phi_prime_ini_scf; /**< \f$ d\phi(t_0)/d\tau \f$: scalar field initial derivative wrt conformal time */
@@ -283,6 +285,7 @@ struct background
   short has_curvature; /**< presence of global spatial curvature? */
   short scf_kg_eq;    /**< evolve scalar field with KG equations */
   short scf_fluid;     /**< evolve scalar field with fluid equations */
+  short fluid_scf;
   short scf_has_perturbations; /** do scalar field perts
 
   //@}

@@ -328,7 +328,7 @@ int background_functions(
     p_tot += (1./3.)*pvecback[pba->index_bg_rho_dr];
     rho_r += pvecback[pba->index_bg_rho_dr];
   }
-  if(pba->has_scf == _TRUE_ && pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H]){ //We switch for fluid equations
+  if(pba->has_scf == _TRUE_ && pvecback[pba->index_bg_H] != 0 && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->fluid_scf_wanted == _TRUE_){ //We switch for fluid equations
     pba->scf_fluid = _TRUE_;
     pba->scf_kg_eq = _FALSE_;
   }
@@ -362,7 +362,7 @@ int background_functions(
     //printf("3H = %e \n", 3*pvecback[pba->index_bg_H]);
     //printf("KE = %e, V = %e \n", (phi_prime*phi_prime/(2*a*a) , V_scf(pba,phi)));
   }
-  else if(pba->has_scf == _TRUE_ &&  pba->scf_fluid == _TRUE_){ //Assume axion has w = 0;
+  else if(pba->has_scf == _TRUE_ &&  pba->scf_fluid == _TRUE_ && pba->fluid_scf_wanted == _TRUE_){ //Assume axion has w = 0;
     phi = pvecback[pba->index_bg_phi_scf]; //phi is frozen to its last value.
     //pvecback[pba->index_bg_rho_scf] = pba->Omega0_scf * pow(pba->H0,2) / pow(a_rel,3);
     pvecback[pba->index_bg_rho_scf] = pvecback_B[pba->index_bi_rho_scf];
@@ -798,6 +798,7 @@ int background_indices(
   pba->has_curvature = _FALSE_;
   pba->scf_kg_eq = _FALSE_;
   pba->scf_fluid = _FALSE_;
+  pba->fluid_scf_wanted = _FALSE_;
   /*COComment this probably isn't the best place to initialise this */
 
   if (pba->Omega0_cdm != 0.)
@@ -819,6 +820,10 @@ int background_indices(
     pba->scf_kg_eq = _TRUE_; //Initially, we solve the KG equation.
   }
 
+  if (pba->fluid_scf != 0.){
+    pba->fluid_scf_wanted = _TRUE_;
+    printf("You have chosen to use fluid equations to evolve scalar field where possible. If not, change 'fluid_scf' to 0.\n");
+  }
   if (pba->Omega0_lambda != 0.)
     pba->has_lambda = _TRUE_;
 
@@ -1784,15 +1789,29 @@ int background_solve(
       printf("    Scalar field details:\n");
       printf("     -> Omega_scf = %g, wished %g\n",
              pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit], pba->Omega0_scf);
+      printf("     -> Omega_cdm = %g \n",pvecback[pba->index_bg_rho_cdm]/pvecback[pba->index_bg_rho_crit]);
+      printf("     -> scf fraction of cdm = %g \n", (pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]) / ((pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]) + (pvecback[pba->index_bg_rho_cdm]/pvecback[pba->index_bg_rho_crit])) );
+      if(pba->scf_potential == axionquad){
+      printf("Additional scf parameters used: \n");
+      printf("m_a = %g eV\n",(pba->scf_parameters[0]/1.5638e29));
+      }
+      if(pba->scf_potential ==axion){
+      printf("Additional scf parameters used: \n");
+      printf("m_a = %g eV, f_a/mpl = %g\n",(pba->scf_parameters[0]/1.5638e29),pba->scf_parameters[1]);
+      }
+      if(pba->scf_potential == ax_cos_cubed){
+      printf("Additional scf parameters used: \n");
+      printf("m_a = %g eV, f_a/mpl = %g\n",(pba->scf_parameters[0]/1.5638e29),pba->scf_parameters[1]);
+      }
       if(pba->has_lambda == _TRUE_)
 	printf("     -> Omega_Lambda = %g, wished %g\n",
                pvecback[pba->index_bg_rho_lambda]/pvecback[pba->index_bg_rho_crit], pba->Omega0_lambda);
-      printf("     -> parameters: [lambda, alpha, A, B] = \n");
-      printf("                    [");
-      for (i=0; i<pba->scf_parameters_size-1; i++){
-        printf("%.3f, ",pba->scf_parameters[i]);
-      }
-      printf("%.3f]\n",pba->scf_parameters[pba->scf_parameters_size-1]);
+      //printf("     -> parameters: [lambda, alpha, A, B] = \n");
+      //printf("                    [");
+      //for (i=0; i<pba->scf_parameters_size-1; i++){
+      //  printf("%.3f, ",pba->scf_parameters[i]);
+      //}
+      //printf("%.3f]\n",pba->scf_parameters[pba->scf_parameters_size-1]);
     }
   }
 
@@ -2390,7 +2409,7 @@ double ddV_double_exp_scf(
 double V_axion_scf(
                   struct background *pba,
                   double phi){
-    return pow(pba->scf_parameters[2],2)*pow(pba->scf_parameters[1],2)*(1 - cos((phi/pba->scf_parameters[1])*_PI_/180));
+    return pow(pba->scf_parameters[0],2)*pow(pba->scf_parameters[1],2)*(1 - cos((phi/pba->scf_parameters[1])*_PI_/180));
 
 }
 
@@ -2398,7 +2417,7 @@ double dV_axion_scf(
                   struct background *pba,
                   double phi){
 
-    return pow(pba->scf_parameters[2],2)*pba->scf_parameters[1]*sin((phi/pba->scf_parameters[1])*_PI_/180);
+    return pow(pba->scf_parameters[0],2)*pba->scf_parameters[1]*sin((phi/pba->scf_parameters[1])*_PI_/180);
 
 }
 
@@ -2407,8 +2426,33 @@ double ddV_axion_scf(
                   double phi){
 
     // printf("1 %e 2 %e \n", exp(-pba->scf_parameters[0]*phi),pow(pba->scf_parameters[0],4));
-    return pow(pba->scf_parameters[2],2)*cos((phi/pba->scf_parameters[1])*_PI_/180);
+    return pow(pba->scf_parameters[0],2)*cos((phi/pba->scf_parameters[1])*_PI_/180);
 
+}
+/** parameters and functions for the axion (1-cos^3) potential
+ * \f$ V_axion = m_a*m_a*f_a*f_a*(1 - cos(phi/f_a))^3
+ */
+double V_ax_cos_cubed_scf(
+                  struct background *pba,
+                  double phi){
+    return pow(pba->scf_parameters[0],2)*pow(pba->scf_parameters[1],2)*(pow((1 - cos((phi/pba->scf_parameters[1])*_PI_/180)),3));
+
+}
+
+double dV_ax_cos_cubed_scf(
+                  struct background *pba,
+                  double phi){
+
+    return 3*pow(pba->scf_parameters[0],2)*pba->scf_parameters[1]*sin((phi/pba->scf_parameters[1])*_PI_/180)*(pow((1 - cos((phi/pba->scf_parameters[1])*_PI_/180)),2));
+
+}
+
+double ddV_ax_cos_cubed_scf(
+                  struct background *pba,
+                  double phi){
+
+    // printf("1 %e 2 %e \n", exp(-pba->scf_parameters[0]*phi),pow(pba->scf_parameters[0],4));
+    return 12*pow(pba->scf_parameters[0],2)*(2 + 3*cos((phi/pba->scf_parameters[1])*_PI_/180))*(pow((sin((phi/(2*pba->scf_parameters[1]))*_PI_/180)),4));
 }
 
 /** parameters and functions for the axion quadratic potential
@@ -2457,6 +2501,9 @@ double V_scf(
   else if(pba->scf_potential == axionquad){
     result = V_axionquad_scf(pba,phi);
   }
+  else if(pba->scf_potential == ax_cos_cubed){
+    result = V_ax_cos_cubed_scf(pba,phi);
+  }
   //printf("result Vf %e\n", result);
 
   return result;
@@ -2474,10 +2521,13 @@ double dV_scf(
     result =  dV_double_exp_scf(pba,phi);
   }
   else if(pba->scf_potential == axion){
-    result = V_axion_scf(pba,phi);
+    result = dV_axion_scf(pba,phi);
   }
   else if(pba->scf_potential == axionquad){
-    result = V_axionquad_scf(pba,phi);
+    result = dV_axionquad_scf(pba,phi);
+  }
+  else if(pba->scf_potential == ax_cos_cubed){
+    result = dV_ax_cos_cubed_scf(pba,phi);
   }
   //printf("result dVf %e\n", result);
 
@@ -2498,10 +2548,14 @@ double ddV_scf(
     result =  ddV_double_exp_scf(pba,phi);
   }
   else if(pba->scf_potential == axion){
-    result = V_axion_scf(pba,phi);
+    result = ddV_axion_scf(pba,phi);
   }
   else if(pba->scf_potential == axionquad){
-    result = V_axionquad_scf(pba,phi);
+    result = ddV_axionquad_scf(pba,phi);
+  }
+
+  else if(pba->scf_potential == ax_cos_cubed){
+    result = ddV_ax_cos_cubed_scf(pba,phi);
   }
   //printf("result ddVf %e\n", result);
   return result;
