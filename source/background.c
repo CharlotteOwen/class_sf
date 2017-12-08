@@ -280,7 +280,6 @@ int background_functions(
   rho_r=0.;
   rho_m=0.;
   a_rel = a / pba->a_today;
-
   class_test(a_rel <= 0.,
              pba->error_message,
              "a = %e instead of strictly positive",a_rel);
@@ -349,8 +348,8 @@ int background_functions(
     pvecback[pba->index_bg_V_scf] = V_scf(pba,phi); //V_scf(pba,phi); //write here potential as function of phi
     pvecback[pba->index_bg_dV_scf] = dV_scf(pba,phi); // dV_scf(pba,phi); //potential' as function of phi
     pvecback[pba->index_bg_ddV_scf] = ddV_scf(pba,phi); // ddV_scf(pba,phi); //potential'' as function of phi
-    pvecback[pba->index_bg_rho_scf] = (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3.; // energy of the scalar field. The field units are set automatically by setting the initial conditions
-    pvecback[pba->index_bg_p_scf] =(phi_prime*phi_prime/(2*a*a) - V_scf(pba,phi))/3.; // pressure of the scalar field
+    pvecback[pba->index_bg_rho_scf] = (pow(pba->scf_parameters[1],2)*phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3.; // energy of the scalar field. The field units are set automatically by setting the initial conditions
+    pvecback[pba->index_bg_p_scf] =(pow(pba->scf_parameters[1],2)*phi_prime*phi_prime/(2*a*a) - V_scf(pba,phi))/3.; // pressure of the scalar field
     pvecback[pba->index_bg_w_scf] =pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]; // e.o.s of the scalar field, only used for outputs
     pvecback_B[pba->index_bi_rho_scf] = pvecback[pba->index_bg_rho_scf];
     rho_tot += pvecback[pba->index_bg_rho_scf];
@@ -358,7 +357,7 @@ int background_functions(
     //divide relativistic & nonrelativistic (not very meaningful for oscillatory models)
     rho_r += 3.*pvecback[pba->index_bg_p_scf]; //field pressure contributes radiation
     rho_m += pvecback[pba->index_bg_rho_scf] - 3.* pvecback[pba->index_bg_p_scf]; //the rest contributes matter
-    //printf("here KG equation, phi: %e, phi': %e rho: %e \n", pvecback_B[pba->index_bi_phi_scf], pvecback_B[pba->index_bi_phi_prime_scf], pvecback_B[pba->index_bi_rho_scf]);
+    //printf("here KG equation, phi: %e, phi': %e rho_scf: %e \n", pvecback_B[pba->index_bi_phi_scf], pvecback_B[pba->index_bi_phi_prime_scf], pvecback[pba->index_bg_rho_scf]);
     //printf("3H = %e \n", 3*pvecback[pba->index_bg_H]);
     //printf("KE = %e, V = %e \n", (phi_prime*phi_prime/(2*a*a) , V_scf(pba,phi)));
   }
@@ -1791,6 +1790,7 @@ int background_solve(
              pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit], pba->Omega0_scf);
       printf("     -> Omega_cdm = %g \n",pvecback[pba->index_bg_rho_cdm]/pvecback[pba->index_bg_rho_crit]);
       printf("     -> scf fraction of cdm = %g \n", (pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]) / ((pvecback[pba->index_bg_rho_scf]/pvecback[pba->index_bg_rho_crit]) + (pvecback[pba->index_bg_rho_cdm]/pvecback[pba->index_bg_rho_crit])) );
+      printf("     -> for reference, rho_crit = %g \n",pvecback[pba->index_bg_rho_crit]);
       if(pba->scf_potential == axionquad){
       printf("Additional scf parameters used: \n");
       printf("m_a = %g eV\n",(pba->scf_parameters[0]/1.5638e29));
@@ -1989,6 +1989,7 @@ int background_initial_conditions(
       //printf(" phi / fa = %e ", (pba->phi_ini_scf/pba->scf_parameters[1]));
       //printf(" phi / fa radians = %e ", ((pba->phi_ini_scf/pba->scf_parameters[1])*_PI_/180));
       //printf("cos(phi_init) = %e ", cos((pba->phi_ini_scf/pba->scf_parameters[1])*_PI_/180));
+      printf("phi ini = %e \n", pba->phi_ini_scf);
     }
     class_test(!isfinite(pvecback_integration[pba->index_bi_phi_scf]) ||
                !isfinite(pvecback_integration[pba->index_bi_phi_scf]),
@@ -2249,7 +2250,7 @@ int background_derivs(
     dy[pba->index_bi_phi_scf] = y[pba->index_bi_phi_prime_scf];
     dy[pba->index_bi_phi_prime_scf] = - y[pba->index_bi_a]*
       (2*pvecback[pba->index_bg_H]*y[pba->index_bi_phi_prime_scf]
-       + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])) ;
+       + y[pba->index_bi_a]*dV_scf(pba,y[pba->index_bi_phi_scf])/(pow(pba->scf_parameters[1],2))) ;
     dy[pba->index_bi_rho_scf] = 0; //Update the scf density until the fluid equation starts.
     //y[pba->index_bi_rho_scf] = y[pba->index_bg_rho_scf];
     //printf("Evolving scalar field using KG equation. phi %e phi prime %e \n", y[pba->index_bi_phi_scf],dy[pba->index_bi_phi_scf]  );
@@ -2258,7 +2259,7 @@ int background_derivs(
     else if (pba->scf_fluid == _TRUE_) {
       /*COComment - treat as a perfect fluid with w = 0 */
     //dy[pba->index_bi_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_scf];
-    dy[pba->index_bi_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_scf];
+    dy[pba->index_bi_rho_scf] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_scf]*(1.+(2./3.));
     //printf("Evolving scalar field using fluid equation.\n");
     }
 
@@ -2443,7 +2444,7 @@ double dV_ax_cos_cubed_scf(
                   struct background *pba,
                   double phi){
 
-    return 3*pow(pba->scf_parameters[0],2)*pba->scf_parameters[1]*sin((phi/pba->scf_parameters[1])*_PI_/180)*(pow((1 - cos((phi/pba->scf_parameters[1])*_PI_/180)),2));
+    return 3*pow(pba->scf_parameters[0],2)*pow(pba->scf_parameters[1],2)*sin((phi/pba->scf_parameters[1])*_PI_/180)*(pow((1 - cos((phi/pba->scf_parameters[1])*_PI_/180)),2));
 
 }
 
@@ -2452,7 +2453,7 @@ double ddV_ax_cos_cubed_scf(
                   double phi){
 
     // printf("1 %e 2 %e \n", exp(-pba->scf_parameters[0]*phi),pow(pba->scf_parameters[0],4));
-    return 12*pow(pba->scf_parameters[0],2)*(2 + 3*cos((phi/pba->scf_parameters[1])*_PI_/180))*(pow((sin((phi/(2*pba->scf_parameters[1]))*_PI_/180)),4));
+    return 12*pow(pba->scf_parameters[0],2)*pow(pba->scf_parameters[1],2)*(2 + 3*cos((phi/pba->scf_parameters[1])*_PI_/180))*(pow((sin((phi/(2*pba->scf_parameters[1]))*_PI_/180)),4));
 }
 
 /** parameters and functions for the axion quadratic potential

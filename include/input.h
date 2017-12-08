@@ -138,7 +138,13 @@ enum target_names {theta_s, Omega_dcdmdr, omega_dcdmdr, Omega_scf, Omega_ini_dcd
 enum computation_stage {cs_background, cs_thermodynamics, cs_perturbations,
                         cs_primordial, cs_nonlinear, cs_transfer, cs_spectra};
 #define _NUM_TARGETS_ 6 //Keep this number as number of target_names
-
+enum scf_pot_inp{
+  pol_times_exp_inp, /** scf_potential set to pol_times_exp:V equals ((\phi-B)^\alpha + A)exp(-lambda*phi), see http://arxiv.org/abs/astro-ph/9908085.*/
+  double_exp_inp, /* scf_potential set to double_exp: V equals \Lambda_1^4e^{-\lambda\phi}+\Lambda_2^4e^{-\mu\phi} */
+  axion_inp, /** scf_potential set to axion: V equals m^2f^2(1-cos(phi/f)) */
+  axionquad_inp, /* scf_potential set to axion quadratic form: V = m^2phi^2/2 */
+  ax_cos_cubed_inp
+};
 struct input_pprpba {
   struct precision * ppr;
   struct background * pba;
@@ -151,6 +157,11 @@ struct fzerofun_workspace {
   double * target_value;
   int target_size;
   enum computation_stage required_computation_stage;
+  enum scf_pot scf_potential; /**< List of currently implement potential for a scalar field */
+  short scf_fluid;
+  double * scf_parameters;  /**< list of parameters describing the scalar field potential */
+  int scf_parameters_size;  /**< size of scf_parameters */
+  int scf_tuning_index;     /**< index in scf_parameters used for tuning */
 };
 
 

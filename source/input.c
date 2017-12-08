@@ -207,7 +207,7 @@ int input_init(
                ErrorMsg errmsg
                ) {
 
-  int flag1;
+  int flag1,flag2;
   double param1;
   int counter, index_target, i;
   double * unknown_parameter;
@@ -224,6 +224,53 @@ int input_init(
   char param_unused_name[_LINE_LENGTH_MAX_];
 
   struct fzerofun_workspace fzw;
+
+class_call(parser_read_list_of_doubles(pfc,
+                                     "scf_parameters",
+                                     &(fzw.scf_parameters_size),
+                                     &(fzw.scf_parameters),
+                                     &flag1,
+                                     errmsg),
+         errmsg,errmsg);
+
+class_call(parser_read_string(pfc,"scf_potential",&string1,&flag1,errmsg),
+               errmsg,
+               errmsg);
+     if (flag1 == _TRUE_) {
+
+       flag2=_FALSE_;
+       if (strcmp(string1,"pol_times_exp") == 0) {
+         fzw.scf_potential = pol_times_exp;
+         flag2 =_TRUE_;
+       }
+       if (strcmp(string1,"double_exp") == 0) {
+          fzw.scf_potential = double_exp;
+         flag2 =_TRUE_;
+       }
+       if (strcmp(string1,"axion") == 0) {
+          fzw.scf_potential = axion;
+          flag2 =_TRUE_;
+       }
+       if (strcmp(string1,"ax_cos_cubed") == 0) {
+          fzw.scf_potential = ax_cos_cubed;
+         flag2 =_TRUE_;
+       }
+       if (strcmp(string1,"axionquad") == 0) {
+          fzw.scf_potential = axionquad;
+          flag2 =_TRUE_;
+       }
+
+   class_test(flag2==_FALSE_,
+                  errmsg,
+                  "could not identify scf_potential value, check that it is one of 'pol_times_exp','double_exp','axion','axionquad','ax_cos_cubed'.");
+     }
+class_call(parser_read_string(pfc,"fluid_scf",&string1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+
+    if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
+    fzw.scf_fluid = _TRUE_;
+    }
   /**
    *
    * These two arrays must contain the strings of names to be searched
@@ -300,7 +347,8 @@ int input_init(
   // }
 
   /** - case with unknown parameters */
-  if (unknown_parameters_size > 0) {
+  if (unknown_parameters_size > 0 && fzw.scf_fluid == _TRUE_) {
+    printf("About to start shooting, initialising tables.\n"); //print_trigger
     /* Create file content structure with additional entries */
     class_call(parser_init(&(fzw.fc),
                            pfc->size+unknown_parameters_size,
@@ -472,7 +520,10 @@ int input_init(
   }
   /** - case with no unknown parameters */
   else{
-
+    if(fzw.scf_fluid==_FALSE_){
+    xzero = 33.1;
+    printf("Shooting entirely skipped, phi_init initialised.\n");
+    }
     /** - --> just read all parameters from input pfc: */
     class_call(input_read_parameters(pfc,
                                      ppr,
@@ -4625,7 +4676,8 @@ int input_get_guess(double *xguess,
 
       }
       else if (ba.scf_tuning_index == 2 && (ba.scf_potential == ax_cos_cubed) ){
-              xguess[index_guess] = 0.8*1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
+              xguess[index_guess] = 160*ba.scf_parameters[1]; //set IC based on f_a. 
+              //0.2*1e2*sqrt((6.0*ba.Omega0_scf*(pow(1.45e-42,0.5)))/((pow(ba.Omega0_g,0.75))*(pow((ba.scf_parameters[0]/1.5637e38),0.5))));
               //xguess[index_guess] =1e-8;
               dxdy[index_guess] = 0.1; //If this is negative, the field always move to positive values as x2 = k*f1*dxdy, even if it shouldn't
               printf("index 0, x = %g, dxdy = %g\n",*xguess,*dxdy);
@@ -4684,6 +4736,8 @@ int input_find_root(double *xzero,
                     int *fevals,
                     struct fzerofun_workspace *pfzw,
                     ErrorMsg errmsg){
+  
+  //struct background ba;       /* for cosmological background */
   double x1, x2, f1, f2, dxdy, dx;
   int iter, iter2;
   int return_function;
@@ -4706,77 +4760,166 @@ int input_find_root(double *xzero,
   // Can we edit the method so it's more of a bisection on the final density?
   // if result 2 > result 1, x - dx.
   // if result 2 < result 1, x + dx
-  dx = f1*dxdy;
-  printf("dx = %e\n", dx);
-  /** - Do linear hunt for boundaries */
-  for (iter=1; iter<=10; iter++){
-    //x2 = x1 + search_dir*dx;
-    printf("Root finding iteration: %d \n",iter);
-    if (x1 > 0 || x2 > 0){
-    	printf("x1 is positive: %e\n",x1);
-    	if((f1 > 0 || f2>0) && x1-dx > 0){
-    		printf("f1 was too high, x1-dx is still positive: %e\n",x1-dx);
-    		x2 = (x1 - dx);
-    		printf("x2 = x1 - dx = %e\n",x2);
+
+  if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->scf_fluid == _TRUE_){
+    dx = 0.5; //f1*dxdy;
+    printf("axion cubed root finding \n");
+    printf("dx = %e\n", dx);
+    /** - Do linear hunt for boundaries */
+    for (iter=1; iter<=20; iter++){
+      printf("Root finding iteration: %d \n",iter);
+      if (x1 > 0){
+        printf("x1 is positive: %e\n",x1);
+        if(f1 > 100){
+          printf("f1 was way too high, x2 = x1/2: %e\n",x1/2);
+          x2 = (x1/2);
+        }
+        else if(f1 > 0 && f1 <= 100 && (x1-dx>0)){
+          printf("f1 was slightly too high, x2 = x1 - dx is still positive, using this: %e\n", x1 - dx);
+           x2 = (x1 - dx);
+        }
+        else if(f1 > 0 && f1 <= 100 && (x1-dx<=0)){
+          printf("f1 was slightly too high but x2 = x1 - dx goes negative, using x2 = x1 - (dx/10): %e\n", x1 - (dx/10));
+           x2 = (x1 - (dx/10));
+        }
+        else if (f1 < -100){
+          printf("f1 was way too low, x2 = 2x1: %e\n", (x1*2));
+          x2 = (x1*2);
+        }
+        else if(f1 < 0 && f1 >= -100 && ((x1+dx)/pfzw->scf_parameters[1]<180)){
+          printf("f1 was slightly too low, x2 = x1 + dx does not go above pi, using this: %e\n", x1 + dx);
+           x2 = (x1 + dx);
+        }
+        else if(f1 < 0 && f1 >= -100){
+          printf("f1 was slightly too low, but x2 = x1 + dx goes above pi, using x2 = x1 + (dx/10) instead: %e\n", x1 + (dx/10));
+           x2 = (x1 + (dx/10));
+        }
       }
-      else if ((f1 > 0 || f2 >0 ) && x1-dx < 0){
-        printf("f1 was too high but x1-dx is negative, using x1/5 instead: %e\n", (x1/5));
-        x2 = (x1/5);
+      if (x1 < 0 ){
+        printf("x1 is negative: %e\n",x1);
+        if(x1+dx < 0){
+          printf("x1+dx is negative: %e\n",x1+dx);
+          x2 = (x1 + dx);
         printf("x2 = %e\n",x2);
+        }
+        else if (x1+dx > 0){
+          printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
+          x2 = (x1/10);
+          printf("x2 = %e\n",x2);
+        }
       }
-      else if (f1 < 0 || f2 < 0){
-        printf("f1 was too low, using x1+x1/2: %e\n",x1+x1/2);
-        x2 = (x1 + x1/2);
-        printf("x2 = x1 + x1/2 = %e\n",x2);
+      for (iter2=1; iter2 <= 3; iter2++) {
+        return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
+        (*fevals)++;
+        printf("x2= %g, f2= %g\n",x2,f2);
+        if (return_function ==_SUCCESS_) {
+          printf("Breaking because successful\n");
+          printf("f1 = %e, f2 = %e\n",f1,f2);
+          printf("f1+f2 = %e\n", f1+f2);
+          break;
+        }
+        else if (iter2 < 3) {
+          dx*=0.5;
+          x2 = x1-dx;
+        }
+        else {
+          //fprintf(stderr,"get here\n");
+          class_stop(errmsg,errmsg);
+        }
       }
-    }
-    if (x1 < 0 ){
-      printf("x1 is negative: %e\n",x1);
-      if(x1+dx < 0){
-        printf("x1+dx is negative: %e\n",x1+dx);
-        x2 = (x1 + dx);
-      printf("x2 = %e\n",x2);
-      }
-      else if (x1+dx > 0){
-        printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
-        x2 = (x1/10);
-        printf("x2 = %e\n",x2);
-      }
-    }
-    for (iter2=1; iter2 <= 3; iter2++) {
-      return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
-      (*fevals)++;
-      printf("x2= %g, f2= %g\n",x2,f2);
-      if (return_function ==_SUCCESS_) {
-        printf("Breaking because successful\n");
-        printf("f1 = %e, f2 = %e\n",f1,f2);
-        printf("f1+f2 = %e\n", f1+f2);
+
+      //if (f1*f2<0.0){
+      if (f1+f2<0.005 && f1+f1>-0.005){
+      // if (f1+f2<0.05){
+        /** - root has been bracketed */
+        printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
+        if (0==0){
+          printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
+        }
         break;
       }
-      else if (iter2 < 3) {
-        dx*=0.5;
-        x2 = x1-dx;
-      }
-      else {
-        //fprintf(stderr,"get here\n");
-        class_stop(errmsg,errmsg);
-      }
-    }
 
-    //if (f1*f2<0.0){
-    if (f1+f2<0.01){
-    // if (f1+f2<0.05){
-      /** - root has been bracketed */
-      if (0==0){
-        printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
-      }
-      break;
+      x1 = x2;
+      f1 = f2;
     }
-
-    x1 = x2;
-    f1 = f2;
   }
+  else if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->scf_fluid == _FALSE_){  //skip shooting if axion potential and evolving as KG
+    *xzero = 33.1;
+    printf("Skipping ridders method. phi_init is %e \n",xzero);
+  } 
+  else {
+  dx = f1*dxdy;
+  printf("pfzw->scf_potential = %s \n",pfzw->scf_potential);
+  printf("dx = %e\n", dx);
+  /** - Do linear hunt for boundaries */
+    for (iter=1; iter<=100; iter++){
+      //x2 = x1 + search_dir*dx;
+      printf("Root finding iteration: %d \n",iter);
+      if (x1 > 0 || x2 > 0){
+      	printf("x1 is positive: %e\n",x1);
+      	if((f1 > 0 || f2>0) && x1-dx > 0){
+      		printf("f1 was too high, x1-dx is still positive: %e\n",x1-dx);
+      		x2 = (x1 - dx);
+      		printf("x2 = x1 - dx = %e\n",x2);
+        }
+        else if ((f1 > 0 || f2 >0 ) && x1-dx < 0){
+          printf("f1 was too high but x1-dx is negative, using x1/5 instead: %e\n", (x1/5));
+          x2 = (x1/5);
+          printf("x2 = %e\n",x2);
+        }
+        else if (f1 < 0 || f2 < 0){
+          printf("f1 was too low, using x1+x1/2: %e\n",x1+x1/2);
+          x2 = (x1 + x1/2);
+          printf("x2 = x1 + x1/2 = %e\n",x2);
+        }
+      }
+      if (x1 < 0 ){
+        printf("x1 is negative: %e\n",x1);
+        if(x1+dx < 0){
+          printf("x1+dx is negative: %e\n",x1+dx);
+          x2 = (x1 + dx);
+        printf("x2 = %e\n",x2);
+        }
+        else if (x1+dx > 0){
+          printf("x1+dx is positive, using x1/10 instead: %e\n", (x1/10));
+          x2 = (x1/10);
+          printf("x2 = %e\n",x2);
+        }
+      }
+      for (iter2=1; iter2 <= 3; iter2++) {
+        return_function = input_fzerofun_1d(x2,pfzw,&f2,errmsg);
+        (*fevals)++;
+        printf("x2= %g, f2= %g\n",x2,f2);
+        if (return_function ==_SUCCESS_) {
+          printf("Breaking because successful\n");
+          printf("f1 = %e, f2 = %e\n",f1,f2);
+          printf("f1+f2 = %e\n", f1+f2);
+          break;
+        }
+        else if (iter2 < 3) {
+          dx*=0.5;
+          x2 = x1-dx;
+        }
+        else {
+          //fprintf(stderr,"get here\n");
+          class_stop(errmsg,errmsg);
+        }
+      }
 
+      //if (f1*f2<0.0){
+      if (f1+f2<0.01){
+      // if (f1+f2<0.05){
+        /** - root has been bracketed */
+        if (0==0){
+          printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
+        }
+        break;
+      }
+
+      x1 = x2;
+      f1 = f2;
+    }
+  }
   //}
 
 
@@ -4820,22 +4963,25 @@ int input_find_root(double *xzero,
 
 
   /** - Find root using Ridders method. (Exchange for bisection if you are old-school.)*/
-  printf("Unable to find root, next line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
-  class_call(class_fzero_ridder(input_fzerofun_1d,
-                                x1,
-                                x2,
-                                1e-5*MAX(fabs(x1),fabs(x2)),
-                                pfzw,
-                                &f1,
-                                &f2,
-                                xzero,
-                                fevals,
-                                errmsg),
-             errmsg,errmsg);
+  //printf("Not calling ridders."); //line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
+  //*xzero = x1;
+  //printf("xzero = %e \n",*xzero);
+  if (pfzw->scf_potential != ax_cos_cubed_inp || pfzw->scf_fluid == _TRUE_){
+    class_call(class_fzero_ridder(input_fzerofun_1d,
+                                  x1,
+                                  x2,
+                                  1e-15*MAX(fabs(x1),fabs(x2)), //original 1e-5 - accuracy for root finding
+                                  pfzw,
+                                  &f1,
+                                  &f2,
+                                  xzero,
+                                  fevals,
+                                  errmsg),
+               errmsg,errmsg);
 
-  return _SUCCESS_;
+    return _SUCCESS_;
+  }
 }
-
 int file_exists(const char *fname){
   FILE *file = fopen(fname, "r");
   if (file != NULL){
