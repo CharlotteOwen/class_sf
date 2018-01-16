@@ -271,6 +271,15 @@ class_call(parser_read_string(pfc,"fluid_scf",&string1,&flag1,errmsg),
     if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
     fzw.scf_fluid = _TRUE_;
     }
+
+class_call(parser_read_string(pfc,"do_shooting",&string1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+
+    if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
+    fzw.do_shooting = _TRUE_;
+    }
+
   /**
    *
    * These two arrays must contain the strings of names to be searched
@@ -347,7 +356,7 @@ class_call(parser_read_string(pfc,"fluid_scf",&string1,&flag1,errmsg),
   // }
 
   /** - case with unknown parameters */
-  if (unknown_parameters_size > 0 && fzw.scf_fluid == _TRUE_) {
+  if (unknown_parameters_size > 0 && fzw.do_shooting == _TRUE_) {
     printf("About to start shooting, initialising tables.\n"); //print_trigger
     /* Create file content structure with additional entries */
     class_call(parser_init(&(fzw.fc),
@@ -520,7 +529,7 @@ class_call(parser_read_string(pfc,"fluid_scf",&string1,&flag1,errmsg),
   }
   /** - case with no unknown parameters */
   else{
-    if(fzw.scf_fluid==_FALSE_){
+    if(fzw.do_shooting==_FALSE_){
     xzero = 33.1;
     printf("Shooting entirely skipped, phi_init initialised.\n");
     }
@@ -4761,7 +4770,7 @@ int input_find_root(double *xzero,
   // if result 2 > result 1, x - dx.
   // if result 2 < result 1, x + dx
 
-  if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->scf_fluid == _TRUE_){
+  if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->do_shooting == _TRUE_){
     dx = 0.5; //f1*dxdy;
     printf("axion cubed root finding \n");
     printf("dx = %e\n", dx);
@@ -4829,7 +4838,7 @@ int input_find_root(double *xzero,
       }
 
       //if (f1*f2<0.0){
-      if (f1+f2<0.005 && f1+f1>-0.005){
+      if (f1+f2<0.00000005 && f1+f1>-0.00000005){
       // if (f1+f2<0.05){
         /** - root has been bracketed */
         printf("Root has been bracketed after %d iterations: [%g, %g].\n",iter,x1,x2);
@@ -4843,7 +4852,7 @@ int input_find_root(double *xzero,
       f1 = f2;
     }
   }
-  else if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->scf_fluid == _FALSE_){  //skip shooting if axion potential and evolving as KG
+  else if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->do_shooting == _FALSE_){  //skip shooting if axion potential and evolving as KG
     *xzero = 33.1;
     printf("Skipping ridders method. phi_init is %e \n",xzero);
   } 
@@ -4966,7 +4975,7 @@ int input_find_root(double *xzero,
   //printf("Not calling ridders."); //line calls Ridders method. x1 = %g, x2 = %g, f1 = %g, f2 = %g \n",x1,x2,f1,f2);
   //*xzero = x1;
   //printf("xzero = %e \n",*xzero);
-  if (pfzw->scf_potential != ax_cos_cubed_inp || pfzw->scf_fluid == _TRUE_){
+  if (pfzw->scf_potential != ax_cos_cubed_inp || pfzw->do_shooting == _TRUE_){
     class_call(class_fzero_ridder(input_fzerofun_1d,
                                   x1,
                                   x2,
