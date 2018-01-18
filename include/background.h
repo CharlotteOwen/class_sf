@@ -83,6 +83,7 @@ struct background
 
   double Omega0_scf;        /**< \f$ \Omega_{0 scf} \f$: scalar field */
   double fluid_scf_wanted;  /** set to 0 to only evolve KG equations, otherwise - switch to fluid when necessary*/
+  double scf_evolve_as_fluid; /** set to 0 to only evolve KG equations, otherwise - switch to fluid when necessary. To be used in perturbation module*/
   short attractor_ic_scf;   /**< whether the scalar field has attractor initial conditions */
   double phi_ini_scf;       /**< \f$ \phi(t_0) \f$: scalar field initial value */
   double phi_prime_ini_scf; /**< \f$ d\phi(t_0)/d\tau \f$: scalar field initial derivative wrt conformal time */

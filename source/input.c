@@ -269,8 +269,9 @@ class_call(parser_read_string(pfc,"fluid_scf",&string1,&flag1,errmsg),
              errmsg);
 
     if ((flag1 == _TRUE_) && ((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL))) {
-    fzw.scf_fluid = _TRUE_;
+    fzw.scf_evolve_as_fluid = _TRUE_;
     }
+printf("Inside input.c. Reading fluid_scf and setting string. %d \n",fzw.scf_evolve_as_fluid);
 
 class_call(parser_read_string(pfc,"do_shooting",&string1,&flag1,errmsg),
              errmsg,
@@ -1246,6 +1247,22 @@ int input_read_parameters(
       }
     }
 
+    class_call(parser_read_string(pfc,
+                                  "fluid_scf",
+                                  &string1,
+                                  &flag1,
+                                  errmsg),
+                errmsg,
+                errmsg);
+
+    if (flag1 == _TRUE_){
+      if((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL)){
+        pba->scf_evolve_as_fluid = _TRUE_;
+      }
+      else {
+        pba->scf_evolve_as_fluid = _FALSE_;
+      }
+    }
   
 
     class_call(parser_read_string(pfc,"scf_potential",&string1,&flag1,errmsg),
@@ -4770,7 +4787,7 @@ int input_find_root(double *xzero,
   // if result 2 > result 1, x - dx.
   // if result 2 < result 1, x + dx
 
-  if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->do_shooting == _TRUE_){
+  if(pfzw->scf_potential == ax_cos_cubed && pfzw->do_shooting == _TRUE_){
     dx = 0.5; //f1*dxdy;
     printf("axion cubed root finding \n");
     printf("dx = %e\n", dx);
@@ -4852,7 +4869,7 @@ int input_find_root(double *xzero,
       f1 = f2;
     }
   }
-  else if(pfzw->scf_potential == ax_cos_cubed_inp && pfzw->do_shooting == _FALSE_){  //skip shooting if axion potential and evolving as KG
+  else if(pfzw->scf_potential == ax_cos_cubed && pfzw->do_shooting == _FALSE_){  //skip shooting if axion potential and evolving as KG
     *xzero = 33.1;
     printf("Skipping ridders method. phi_init is %e \n",xzero);
   } 

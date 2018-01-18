@@ -137,7 +137,7 @@ int perturb_init(
 #endif
 
   /** - perform preliminary checks */
-  // printf("Flag for fluid equations is %d\n",pba->scf_fluid); //print_trigger
+  printf("Flag for fluid equations is %d\n",pba->scf_fluid); //print_trigger
 
   if (ppt->has_perturbations == _FALSE_) {
     if (ppt->perturbations_verbose > 0)
@@ -3106,7 +3106,7 @@ int perturb_vector_init(
     if (pba->scf_has_perturbations == _TRUE_){
     class_define_index(ppv->index_pt_phi_scf,pba->has_scf,index_pt,1); /* scalar field density */
     class_define_index(ppv->index_pt_phi_prime_scf,pba->has_scf,index_pt,1); /* scalar field velocity */
-    if(pba->scf_potential == axionquad || pba->scf_potential == axion ){
+    if(pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed ){
       class_define_index(ppv->index_pt_delta_scf,pba->has_scf,index_pt,1); /* scf density (velocity zero in synchronous gauge)*/ //COpertchange
       class_define_index(ppv->index_pt_theta_scf,pba->has_scf,index_pt,1); /* scf velocity */
     }
@@ -3436,7 +3436,8 @@ int perturb_vector_init(
     ppw->pv = ppv;
 
     /** - --> (c) fill the vector ppw-->pv-->y with appropriate initial conditions */
-
+    if (ppt->perturbations_verbose>10)
+      fprintf(stdout,"Calling 'perturb_initial_conditions");
     class_call(perturb_initial_conditions(ppr,
                                           pba,
                                           ppt,
@@ -3454,7 +3455,8 @@ int perturb_vector_init(
 
   else {
     /** - --> (a) for the scalar mode: */
-
+    if (ppt->perturbations_verbose>2)
+      fprintf(stdout,"scalars");
     if (_scalars_) {
 
       /** - ---> (a.1.) check that the change of approximation scheme makes
@@ -3741,6 +3743,7 @@ int perturb_vector_init(
       /* -- case of switching on ncdm fluid
          approximation. Provide correct initial conditions to new set
          of variables */
+      /*CO this could be what we need for scf*/
 
       if (pba->has_ncdm == _TRUE_) {
 
@@ -4098,6 +4101,8 @@ int perturb_initial_conditions(struct precision * ppr,
     /** - (a) compute relevant background quantities: compute rho_r,
         rho_m, rho_nu (= all relativistic except photons), and their
         ratio. */
+    if (ppt->perturbations_verbose>10)
+      fprintf(stdout,"Calling 'background_at_tau.\n");
     class_call(background_at_tau(pba,
                                  tau,
                                  pba->normal_info,
@@ -4123,7 +4128,9 @@ int perturb_initial_conditions(struct precision * ppr,
     if (pba->has_cdm == _TRUE_) {
       rho_m += ppw->pvecback[pba->index_bg_rho_cdm];
     }
-    if (pba->has_scf == _TRUE_ && (pba->scf_potential == axionquad || pba->scf_potential == axion)) { //VP
+    if (ppt->perturbations_verbose>2)
+      fprintf(stdout,"Add rho_scf to rho_m. \n");
+    if (pba->has_scf == _TRUE_ && (pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed)) { //VP
       rho_m += ppw->pvecback[pba->index_bg_rho_scf];
     }
     if (pba->has_dcdm == _TRUE_) {
@@ -4256,8 +4263,8 @@ int perturb_initial_conditions(struct precision * ppr,
         */
         //COpertchange - initialise the new delta we have created to zero (or same value cdm took). Does not need fluid if statement because we initialise before fluid regime.
         // at this point synchronous gauge is presumed. Will never be applicable for delta.
-        if(pba->scf_potential == axionquad || pba->scf_potential == axion)ppw->pv->y[ppw->pv->index_pt_delta_scf] = 0.;//3./4.*ppw->pv->y[ppw->pv->index_pt_delta_scf]; /* scf density */
-        if(pba->scf_potential == axionquad || pba->scf_potential == axion)ppw->pv->y[ppw->pv->index_pt_theta_scf] = 0.;//3./4.*ppw->pv->y[ppw->pv->index_pt_delta_scf]; /* scf density */
+        if(pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed)ppw->pv->y[ppw->pv->index_pt_delta_scf] = 0.;//3./4.*ppw->pv->y[ppw->pv->index_pt_delta_scf]; /* scf density */
+        if(pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed)ppw->pv->y[ppw->pv->index_pt_theta_scf] = 0.;//3./4.*ppw->pv->y[ppw->pv->index_pt_delta_scf]; /* scf density */
         /* scf as cdm velocity vanishes in the synchronous gauge */
         ppw->pv->y[ppw->pv->index_pt_phi_scf] = 0.;//a*a/k/k/ppw->pvecback[pba->index_bg_phi_prime_scf]*k*ktau_three/4.*1./(4.-6.*(1./3.)+3.*1.) * (ppw->pvecback[pba->index_bg_rho_scf] + ppw->pvecback[pba->index_bg_p_scf])* ppr->curvature_ini * s2_squared;
         //COpertchange = 0.
@@ -4330,7 +4337,7 @@ int perturb_initial_conditions(struct precision * ppr,
     }
 
     /** - --> (b.3.) Baryon Isocurvature */
-
+      /*CO add scf here too? */
     if ((ppt->has_bi == _TRUE_) && (index_ic == ppt->index_ic_bi)) {
 
       ppw->pv->y[ppw->pv->index_pt_delta_g] = ppr->entropy_ini*fracb*om*tau*(-2./3.+om*tau/4.);
@@ -4358,7 +4365,7 @@ int perturb_initial_conditions(struct precision * ppr,
     }
 
     /** - --> (b.4.) Neutrino density Isocurvature */
-
+      /*CO add scf here too? */
     if ((ppt->has_nid == _TRUE_) && (index_ic == ppt->index_ic_nid)) {
 
       class_test((pba->has_ur == _FALSE_) && (pba->has_ncdm == _FALSE_),
@@ -4386,7 +4393,7 @@ int perturb_initial_conditions(struct precision * ppr,
     }
 
     /** - --> (b.5.) Neutrino velocity Isocurvature */
-
+      /*CO add scf here too? */
     if ((ppt->has_niv == _TRUE_) && (index_ic == ppt->index_ic_niv)) {
 
       class_test((pba->has_ur == _FALSE_) && (pba->has_ncdm == _FALSE_),
@@ -4450,7 +4457,7 @@ int perturb_initial_conditions(struct precision * ppr,
         delta_cdm = ppw->pv->y[ppw->pv->index_pt_delta_cdm];
       else if (pba->has_dcdm == _TRUE_)
         delta_cdm = ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
-      else if (pba->has_scf == _TRUE_ && pba->has_cdm == _FALSE_) //VP: scf is cdm
+      else if (pba->has_scf == _TRUE_ && pba->has_cdm == _FALSE_) //VP: scf is cdm //CO what if we have both and scf is only fraction of cdm?
         delta_cdm = ppw->pv->y[ppw->pv->index_pt_delta_scf];
       else
         delta_cdm=0.;
@@ -4504,7 +4511,8 @@ int perturb_initial_conditions(struct precision * ppr,
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
            -a*a* dV_scf(pba,ppw->pvecback[pba->index_bg_phi_scf])*alpha
            +ppw->pvecback[pba->index_bg_phi_prime_scf]*alpha_prime);
-          if(pba->scf_potential == axionquad || pba->scf_potential == axion){
+          if((pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed) && ppt->scf_fluid_flag_perts == _TRUE_ ){ //CO always evolving as fluid if axion or axionquad 
+            //18.01.18 - not anymore, cos^3 we need option to evolve fully as KG
             ppw->pv->y[ppw->pv->index_pt_delta_scf] -= 3.*a_prime_over_a*alpha;
             ppw->pv->y[ppw->pv->index_pt_theta_scf] = k*k*alpha;
           }
@@ -5158,9 +5166,11 @@ int perturb_einstein(
   else dmu_gcdm = 0;
   dmu_gcdm = MIN(1.,dmu_gcdm);
   /** - sum up perturbations from all species */
+  //printf("Calling perturb_total_stress_energy.\n");
   class_call(perturb_total_stress_energy(ppr,pba,pth,ppt,index_md,k,y,ppw),
              ppt->error_message,
              ppt->error_message);
+  //printf("Leaving perturb_total_stress_energy.\n");
 
   /** - for scalar modes: */
 
@@ -5580,6 +5590,8 @@ int perturb_total_stress_energy(
        from rho_plus_p_shear. So the contribution from the scalar field must be below all
        species with non-zero shear.
     */
+      if (ppt->perturbations_verbose>10) 
+    fprintf(stdout,"scf section next. pba->scf_has_perturbations = %f. \n", pba->scf_has_perturbations);
 
     if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
 
@@ -5591,7 +5603,7 @@ int perturb_total_stress_energy(
         delta_p_scf = 1./3.*
           (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
            - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
-        if(pba->scf_potential == axionquad || pba->scf_potential == axion) y[ppw->pv->index_pt_phi_scf] = delta_rho_scf/ppw->pvecback[pba->index_bg_rho_scf];
+        if(pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed) y[ppw->pv->index_pt_phi_scf] = delta_rho_scf/ppw->pvecback[pba->index_bg_rho_scf];
         }
         else {
           printf("scf_fluid_flag_perts == TRUE but we are in the synchronous gauge! Please switch to Newtonian gauge.\n");
@@ -5635,7 +5647,6 @@ int perturb_total_stress_energy(
           ppw->rho_plus_p_theta = ppw->rho_plus_p_theta + ppw->pvecback[pba->index_bg_rho_scf]*y[ppw->pv->index_pt_theta_scf];
       }
     }
-
     /* add your extra species here */
 
     /* fluid contribution */
@@ -5707,10 +5718,13 @@ int perturb_total_stress_energy(
           rho_m += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
         }
       }
-      if (pba->has_scf == _TRUE_ && (pba->scf_potential == axionquad || pba->scf_potential == axion)) { //VP
+      if (ppt->perturbations_verbose>10)
+      fprintf(stdout,"Might segmentation fault here when scf perts. \n");
+
+      if (pba->has_scf == _TRUE_ && (pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed) && pba->scf_has_perturbations == _TRUE_) { 
         delta_rho_m += ppw->pvecback[pba->index_bg_rho_scf]*y[ppw->pv->index_pt_delta_scf];
-        rho_m += ppw->pvecback[pba->index_bg_rho_scf];
-      }
+        rho_m += ppw->pvecback[pba->index_bg_rho_scf];//VP
+      } //without hte flag for scf_perturbations, throws a segmentation fault here when running with scf_perturbations off. CO-18.01.18
       /* infer delta_m */
 
       ppw->delta_m = delta_rho_m/rho_m;
@@ -5722,6 +5736,7 @@ int perturb_total_stress_energy(
        Theta . Note that computing theta_m is necessary also if we want
        the delta_m source only, because the gauge-invariant delta_m
        involves theta_m in the current gauge. */
+    //printf("Have passed source_delta_m in perturb_total_stress_energy.\n");
 
     if ((ppt->has_source_delta_m == _TRUE_) || (ppt->has_source_theta_m == _TRUE_)) {
 
@@ -6642,7 +6657,7 @@ int perturb_print_variables(double tau,
 
           delta_scf = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
           theta_scf = rho_plus_p_theta_scf/(pvecback[pba->index_bg_rho_scf]+pvecback[pba->index_bg_p_scf]);
-          if(pba->scf_potential==axionquad || pba->scf_potential == axion){
+          if(pba->scf_potential==axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed){
             y[ppw->pv->index_pt_delta_scf] = delta_scf;
             y[ppw->pv->index_pt_theta_scf] = theta_scf;
           }
@@ -6989,7 +7004,6 @@ int perturb_derivs(double tau,
   double dmu_gcdm;
 
   /** - rename the fields of the input structure (just to avoid heavy notations) */
-
   pppaw = parameters_and_workspace;
 
   k = pppaw->k;
@@ -7007,6 +7021,8 @@ int perturb_derivs(double tau,
   pvecmetric = ppw->pvecmetric;
   pv = ppw->pv;
 
+  //printf("Just inside perturb_derivs. The value of pba->scf_fluid is %d \n", pba->scf_fluid);
+
   /** - get background/thermo quantities in this point */
 
   class_call(background_at_tau(pba,
@@ -7017,6 +7033,8 @@ int perturb_derivs(double tau,
                                pvecback),
              pba->error_message,
              error_message);
+  
+  //printf("Background has been called inside perturb_derivs. The value of pba->scf_fluid is %d \n Calling thermodynamics_at_z. \n", pba->scf_fluid);
 
   class_call(thermodynamics_at_z(pba,
                                  pth,
@@ -7027,11 +7045,38 @@ int perturb_derivs(double tau,
                                  pvecthermo),
              pth->error_message,
              error_message);
-   if((pba->scf_potential == axionquad|| pba->scf_potential == axion ) && pba->has_scf == _TRUE_ && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->scf_has_perturbations == _TRUE_ ){
+
+  //printf("Finished calling thermodynamics_at_z. \n");
+
+  if(pba->scf_has_perturbations == _TRUE_){
+   if((pba->scf_potential == axionquad|| pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed ) && pba->has_scf == _TRUE_ && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->scf_has_perturbations == _TRUE_ && pba->scf_evolve_as_fluid == _TRUE_){
        ppt->scf_fluid_flag_perts = _TRUE_;
-   }
+      } ///input file uses fluid_scf but the input flag is actually scf_fluid
+    if (ppt->perturbations_verbose>10) {
+    fprintf(stdout,"Inside perturb derivs, if conditions are true, setting scf_fluid_flag_perts = true. The value is: %d \n ", ppt->scf_fluid_flag_perts);
+    fprintf(stdout,"The value of pba->scf_evolve_as_fluid is %f \n", pba->scf_evolve_as_fluid);
+    fprintf(stdout,"The value of pba->scf_potential is %f \n", pba->scf_potential);
+    fprintf(stdout,"The value of pba->scf_has_scf is %f \n", pba->has_scf);
+    fprintf(stdout,"The value of pba->scf_has_perturbations is %f \n", pba->scf_has_perturbations);
+    fprintf(stdout,"The value of 3*pvecback[pba->index_bg_H] is %f \n", 3*pvecback[pba->index_bg_H]);
+    }
+  }
+  if(pba->scf_has_perturbations == _FALSE_ ){
+    if (ppt->perturbations_verbose>10) 
+      fprintf(stdout,"Setting fluid_flag_perts to false. \n");
+    ppt->scf_fluid_flag_perts = _FALSE_ ;
+  }
+
+      /* Using pba->scf_fluid to determine whether to trigger the fluid flag for perturbations does not work because at the end of the background call it is reset to false. Instead, we need to use the trigger from the input file directly.  */
+
+
+
+
 
   /** - get metric perturbations with perturb_einstein() */
+
+  //printf("Calling perturb_einstein. \n");
+
   class_call(perturb_einstein(ppr,
                               pba,
                               pth,
@@ -7045,6 +7090,7 @@ int perturb_derivs(double tau,
              error_message);
 
   /** - compute related background quantities */
+  //printf("Leaving perturb_einstein. \n");
 
   a = pvecback[pba->index_bg_a];
   a2 = a*a;
@@ -7191,11 +7237,13 @@ int perturb_derivs(double tau,
     }
 
     else {
+  //printf("Calling perturb_tca_slip_and_shear. \n");
 
       /* with tca */
       class_call(perturb_tca_slip_and_shear(y,pppaw,error_message),
                  error_message,
                  error_message);
+  //printf("Leaving perturb_tca_slip_and_shear. \n");
 
       /* perturbed recombination has an impact **/
       dy[pv->index_pt_theta_b] =
@@ -7425,9 +7473,11 @@ int perturb_derivs(double tau,
       }
 
     }
+  if (ppt->perturbations_verbose>10) 
+    fprintf(stdout,"Starting scf evolution in perturb_einstein. \n");
 
     /** - ---> scalar field (scf) */
-    // printf("here\n");
+    //printf("here\n");
     if (pba->has_scf == _TRUE_ && pba->scf_has_perturbations == _TRUE_) {
       // if (ppt->scf_fluid_flag_perts == _FALSE_){
         // printf("Evolving as KG, 3H = %e, m = %e. \n",3*ppw->pvecback[pba->index_bg_H],pba->scf_parameters[0]);
@@ -7446,7 +7496,7 @@ int perturb_derivs(double tau,
         dy[pv->index_pt_phi_scf] = 0.;
         dy[pv->index_pt_phi_prime_scf] = 0.;
       }
-      if (ppt->gauge == newtonian && (pba->scf_potential == axionquad || pba->scf_potential == axion)) {
+      if (ppt->gauge == newtonian && (pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed)) {
         //printf("Evolving as fluid.\n");
           // printf("Evolving as fluid, 3H = %e, m = %e. \n",3*ppw->pvecback[pba->index_bg_H],pba->scf_parameters[0]); //print_trigger
         dy[pv->index_pt_delta_scf] = -(y[pv->index_pt_theta_scf]+metric_continuity); /* cdm density */
