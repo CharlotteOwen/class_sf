@@ -4128,7 +4128,7 @@ int perturb_initial_conditions(struct precision * ppr,
     if (pba->has_cdm == _TRUE_) {
       rho_m += ppw->pvecback[pba->index_bg_rho_cdm];
     }
-    if (ppt->perturbations_verbose>2)
+    if (ppt->perturbations_verbose>10)
       fprintf(stdout,"Add rho_scf to rho_m. \n");
     if (pba->has_scf == _TRUE_ && (pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed)) { //VP
       rho_m += ppw->pvecback[pba->index_bg_rho_scf];
@@ -4429,7 +4429,8 @@ int perturb_initial_conditions(struct precision * ppr,
 
       ppw->pv->y[ppw->pv->index_pt_eta] = eta;
     }
-
+    if (ppt->perturbations_verbose>10)
+      fprintf(stdout,"Change eta as in synchronous gauge. \n");
 
     /** - (d) If the needed gauge is the newtonian gauge, we must compute alpha and then perform a gauge transformation for each variable */
 
@@ -4499,13 +4500,9 @@ int perturb_initial_conditions(struct precision * ppr,
 
       /* scalar field: check */
       if (pba->has_scf == _TRUE_&& pba->scf_has_perturbations == _TRUE_) {
-        // printf("Initial conditions. In the Newtonian guage. \n");
         alpha_prime = 0.0;
-
           /* - 2. * a_prime_over_a * alpha + eta
              - 4.5 * (a2/k2) * ppw->rho_plus_p_shear; */
-        // if (ppt->scf_fluid_flag_perts == _FALSE_){
-          // printf("fluid_flag = false. \n");
           ppw->pv->y[ppw->pv->index_pt_phi_scf] += alpha*ppw->pvecback[pba->index_bg_phi_prime_scf];
           ppw->pv->y[ppw->pv->index_pt_phi_prime_scf] +=
           (-2.*a_prime_over_a*alpha*ppw->pvecback[pba->index_bg_phi_prime_scf]
@@ -4516,12 +4513,6 @@ int perturb_initial_conditions(struct precision * ppr,
             ppw->pv->y[ppw->pv->index_pt_delta_scf] -= 3.*a_prime_over_a*alpha;
             ppw->pv->y[ppw->pv->index_pt_theta_scf] = k*k*alpha;
           }
-        // }
-        // else {
-        //   printf("fluid_flag = true. \n");
-        //   ppw->pv->y[ppw->pv->index_pt_delta_scf] -= 3.*a_prime_over_a*alpha;
-        //   ppw->pv->y[ppw->pv->index_pt_theta_scf] = k*k*alpha;
-        // }
       }
 
       if ((pba->has_ur == _TRUE_) || (pba->has_ncdm == _TRUE_) || (pba->has_dr == _TRUE_)) {
@@ -7049,7 +7040,7 @@ int perturb_derivs(double tau,
   //printf("Finished calling thermodynamics_at_z. \n");
 
   if(pba->scf_has_perturbations == _TRUE_){
-   if((pba->scf_potential == axionquad|| pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed ) && pba->has_scf == _TRUE_ && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->scf_has_perturbations == _TRUE_ && pba->scf_evolve_as_fluid == _TRUE_){
+   if((pba->scf_potential == axionquad || pba->scf_potential == axion || pba->scf_potential == ax_cos_cubed ) && pba->has_scf == _TRUE_ && pba->scf_parameters[0] >= 3*pvecback[pba->index_bg_H] && pba->scf_has_perturbations == _TRUE_ && pba->scf_evolve_as_fluid == _TRUE_){
        ppt->scf_fluid_flag_perts = _TRUE_;
       } ///input file uses fluid_scf but the input flag is actually scf_fluid
     if (ppt->perturbations_verbose>10) {
@@ -7483,7 +7474,8 @@ int perturb_derivs(double tau,
         // printf("Evolving as KG, 3H = %e, m = %e. \n",3*ppw->pvecback[pba->index_bg_H],pba->scf_parameters[0]);
       /** - ----> field value */
       if (ppt->scf_fluid_flag_perts == _FALSE_) {
-      //printf("Evolving as KG.\n");
+      if (ppt->perturbations_verbose>10) 
+    fprintf(stdout,"Evolving as KG.\n");
       dy[pv->index_pt_phi_scf] = y[pv->index_pt_phi_prime_scf];
       // printf("y[pv->index_pt_phi_prime_scf] %e\n", y[pv->index_pt_phi_prime_scf]);
       /** - ----> Klein Gordon equation */
